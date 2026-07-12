@@ -18,9 +18,11 @@ export function spelCompletion(
 
     const items = SpelCompletionEngine.getCompletions(expression, position, schema);
 
+    const validFor = /\w*/;
+
     return {
-      from: position,
-      options: items.map(item => mapToCM6Completion(item, position)),
+      from: (context.matchBefore(validFor)?.from) ?? position,
+      options: items.map(item => mapToCM6Completion(item)),
       // Allow completions at any position
       validFor: () => true,
     };
@@ -28,10 +30,7 @@ export function spelCompletion(
 }
 
 /** Map spel-ts CompletionItem to CM6 Completion */
-function mapToCM6Completion(item: CompletionItem, position: number) {
-  // Compute the prefix length to replace
-  const prefix = computePrefixAtPosition(position);
-
+function mapToCM6Completion(item: CompletionItem) {
   // Map CompletionKind to CM6 type
   const type = mapKindToCM6Type(item.kind);
 
@@ -44,12 +43,6 @@ function mapToCM6Completion(item: CompletionItem, position: number) {
     // Higher priority items appear first
     boost: item.sortPriority / 100,
   };
-
-  function computePrefixAtPosition(pos: number): number {
-    // Find the start of the word at cursor position
-    // This is simplified — CM6 handles most prefix computation internally
-    return 0;
-  }
 }
 
 function mapKindToCM6Type(kind: string): string {

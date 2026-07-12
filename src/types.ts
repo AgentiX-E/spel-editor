@@ -7,8 +7,6 @@ export interface EditorConfig {
   minHeight?: string;
   /** Context schema for completion/diagnostics */
   contextSchema?: ContextSchema;
-  /** Enable natural language input */
-  showNL?: boolean;
 }
 
 /** Event detail for 'change' event */

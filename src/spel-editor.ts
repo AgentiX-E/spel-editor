@@ -10,7 +10,7 @@ import { spelLanguage } from './cm6/spel-language.js';
 import { spelCompletion } from './cm6/completion-source.js';
 import { spelLint } from './cm6/lint-source.js';
 import { spelHover } from './cm6/hover-tooltip.js';
-import { SpelFormatter } from '@agentix-e/spel-ts';
+import { SpelFormatter, SpelDiagnosticEngine } from '@agentix-e/spel-ts';
 
 import type { SpelEditorDetail } from './types.js';
 import type { ContextSchema, SpelDiagnostic } from '@agentix-e/spel-ts';
@@ -71,9 +71,6 @@ export class SpelEditor extends LitElement {
 
   @property({ type: String, attribute: 'min-height' })
   minHeight = '80px';
-
-  @property({ type: Boolean, attribute: false })
-  showNL = false;
 
   @query('.cm-container')
   private containerEl!: HTMLElement;
@@ -151,6 +148,14 @@ export class SpelEditor extends LitElement {
       keymap.of([...defaultKeymap, ...historyKeymap]),
       cmPlaceholder(this.placeholder),
       EditorView.updateListener.of(update => {
+        // Populate diagnostic cache from lint diagnostics
+        // The lint source (spelLint) runs SpelDiagnosticEngine.validate() internally;
+        // we recompute here to keep diagnosticCache in sync with the SpelDiagnostic[] format
+        // used by validate() and the 'change' event.
+        this.diagnosticCache = SpelDiagnosticEngine.validate(
+          update.state.sliceDoc(),
+          this.contextSchema ?? undefined,
+        );
         if (update.docChanged) {
           this.value = update.state.sliceDoc();
           this.#fireChange();
@@ -169,11 +174,9 @@ export class SpelEditor extends LitElement {
   }
 
   #updateEditorState() {
-    // Simplified: dispatching state effects requires complex CM6 internals.
-    // Instead, we just track the state and the editor handles it via readOnly config at creation time.
-    if (!this.editorView) return;
-    const editable = !(this.readonly || this.disabled);
-    this.editorView.contentDOM.contentEditable = String(editable);
+    this.editorView?.destroy();
+    this.editorView = null;
+    this.#createEditor();
   }
 
   #fireChange() {

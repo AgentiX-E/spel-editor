@@ -3,12 +3,12 @@
 > Web-embeddable Spring Expression Language (SpEL) editor.
 > Based on CodeMirror 6 + spel-ts v1.1.0. Framework-agnostic Web Component.
 
-[![npm version](https://img.shields.io/npm/v/@agentix-e/spel-editor-core)](https://www.npmjs.com/package/@agentix-e/spel-editor-core)
+[![npm version](https://img.shields.io/npm/v/@agentix-e/spel-editor)](https://www.npmjs.com/package/@agentix-e/spel-editor)
 
 ## Quick Start
 
 ```bash
-npm install @agentix-e/spel-editor-core
+npm install @agentix-e/spel-editor
 ```
 
 ```html
@@ -18,7 +18,7 @@ npm install @agentix-e/spel-editor-core
 ></spel-editor>
 
 <script type="module">
-  import '@agentix-e/spel-editor-core';
+  import '@agentix-e/spel-editor';
 
   const editor = document.querySelector('spel-editor');
   editor.addEventListener('change', (e) => {
@@ -70,7 +70,7 @@ spel-editor {
 }
 ```
 
-See the full token reference in the [API docs](https://agentix-e.github.io/spel-editor/).
+Full API documentation is coming soon.
 
 ## License
 
