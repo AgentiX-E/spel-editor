@@ -77,6 +77,7 @@ export class SpelEditor extends LitElement {
 
   private editorView: EditorView | null = null;
   private diagnosticCache: SpelDiagnostic[] = [];
+  private diagnosticDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   override render() {
     return html`
@@ -100,10 +101,30 @@ export class SpelEditor extends LitElement {
     if (changed.has('disabled') || changed.has('readonly')) {
       this.#updateEditorState();
     }
+    // Re-create editor if it was destroyed (e.g. after re-attach to DOM)
+    if (!this.editorView && this.containerEl) {
+      this.#createEditor();
+    }
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    // Re-create editor when re-attached to DOM after removal
+    if (this.hasUpdated && !this.editorView) {
+      void this.updateComplete.then(() => {
+        if (!this.editorView) {
+          this.#createEditor();
+        }
+      });
+    }
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    if (this.diagnosticDebounceTimer) {
+      clearTimeout(this.diagnosticDebounceTimer);
+      this.diagnosticDebounceTimer = null;
+    }
     this.editorView?.destroy();
     this.editorView = null;
   }
@@ -117,8 +138,22 @@ export class SpelEditor extends LitElement {
     if (this.editorView) {
       this.editorView.dispatch({
         changes: { from: 0, to: this.editorView.state.doc.length, insert: value },
+        selection: { anchor: value.length },
       });
+      this.#scheduleDiagnostics();
     }
+  }
+
+  /**
+   * Insert a text snippet at the current cursor position.
+   */
+  insertSnippet(snippet: string): void {
+    if (!this.editorView) return;
+    const { from, to } = this.editorView.state.selection.main;
+    this.editorView.dispatch({
+      changes: { from, to, insert: snippet },
+      selection: { anchor: from + snippet.length },
+    });
   }
 
   validate(): SpelDiagnostic[] {
@@ -127,14 +162,43 @@ export class SpelEditor extends LitElement {
 
   format(): void {
     if (!this.editorView) return;
-    const formatted = SpelFormatter.format(this.editorView.state.sliceDoc());
-    if (formatted) {
-      this.setValue(formatted);
+    const current = this.editorView.state.sliceDoc();
+    const formatted = SpelFormatter.format(current);
+    if (formatted && formatted !== current) {
+      this.editorView.dispatch({
+        changes: { from: 0, to: this.editorView.state.doc.length, insert: formatted },
+        selection: { anchor: formatted.length },
+      });
     }
   }
 
   getEditorView(): EditorView | null {
     return this.editorView;
+  }
+
+  /**
+   * Schedule a debounced diagnostic run (300ms).
+   * Avoids redundant computation on rapid typing.
+   */
+  #scheduleDiagnostics() {
+    if (this.diagnosticDebounceTimer) {
+      clearTimeout(this.diagnosticDebounceTimer);
+    }
+    this.diagnosticDebounceTimer = setTimeout(() => {
+      this.#runDiagnostics();
+      this.diagnosticDebounceTimer = null;
+    }, 300);
+  }
+
+  /**
+   * Populate diagnosticCache by running validation.
+   */
+  #runDiagnostics() {
+    if (!this.editorView) return;
+    this.diagnosticCache = SpelDiagnosticEngine.validate(
+      this.editorView.state.sliceDoc(),
+      this.contextSchema ?? undefined,
+    );
   }
 
   #createEditor() {
@@ -148,17 +212,10 @@ export class SpelEditor extends LitElement {
       keymap.of([...defaultKeymap, ...historyKeymap]),
       cmPlaceholder(this.placeholder),
       EditorView.updateListener.of(update => {
-        // Populate diagnostic cache from lint diagnostics
-        // The lint source (spelLint) runs SpelDiagnosticEngine.validate() internally;
-        // we recompute here to keep diagnosticCache in sync with the SpelDiagnostic[] format
-        // used by validate() and the 'change' event.
-        this.diagnosticCache = SpelDiagnosticEngine.validate(
-          update.state.sliceDoc(),
-          this.contextSchema ?? undefined,
-        );
         if (update.docChanged) {
           this.value = update.state.sliceDoc();
           this.#fireChange();
+          this.#scheduleDiagnostics();
         }
       }),
     ];
@@ -171,6 +228,9 @@ export class SpelEditor extends LitElement {
       state: EditorState.create({ doc: this.value, extensions }),
       parent: this.containerEl,
     });
+
+    // Run initial diagnostics
+    this.#scheduleDiagnostics();
   }
 
   #updateEditorState() {

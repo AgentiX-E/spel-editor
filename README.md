@@ -37,40 +37,52 @@ npm install @agentix-e/spel-editor
 - **Non-invasive theming** — 48 CSS custom properties for complete visual control
 - **Framework agnostic** — Works with React, Vue, Angular, Svelte, or plain HTML
 
-## API
+## API Reference
 
-### Attributes/Properties
+### Properties (Attributes)
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `value` | `string` | `''` | SpEL expression value |
-| `placeholder` | `string` | `'Enter SpEL expression...'` | Placeholder text |
-| `readonly` | `boolean` | `false` | Read-only mode |
-| `disabled` | `boolean` | `false` | Disabled mode |
-| `min-height` | `string` | `'80px'` | Minimum editor height |
-| `context-schema` | `ContextSchema \| null` | `null` | Context schema for completions/diagnostics |
+| Property | Attribute | Type | Default | Description |
+|----------|-----------|------|---------|-------------|
+| `value` | `value` | `string` | `''` | SpEL expression value |
+| `placeholder` | `placeholder` | `string` | `'Enter SpEL expression...'` | Placeholder text when editor is empty |
+| `readonly` | `readonly` | `boolean` | `false` | Read-only mode (prevents editing) |
+| `disabled` | `disabled` | `boolean` | `false` | Disabled mode (editor becomes inert) |
+| `minHeight` | `min-height` | `string` | `'80px'` | Minimum editor height (CSS value) |
+| `contextSchema` | — | `ContextSchema \| null` | `null` | Context schema for completions and diagnostics. Set via JavaScript only (not an HTML attribute) |
 
 ### Methods
 
-- `getValue(): string` — Get current expression
-- `setValue(value: string): void` — Set expression programmatically
-- `validate(): SpelDiagnostic[]` — Get current diagnostics
-- `format(): void` — Format the expression
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `getValue()` | `string` | Get the current expression text from the editor |
+| `setValue(value: string)` | `void` | Set the expression text programmatically |
+| `validate()` | `SpelDiagnostic[]` | Get the current diagnostics from the debounced validation cache |
+| `format()` | `void` | Format the current expression using SpelFormatter |
+| `insertSnippet(snippet: string)` | `void` | Insert a text snippet at the current cursor position |
+| `getEditorView()` | `EditorView \| null` | Get the underlying CodeMirror 6 EditorView instance |
 
-## Theming
+### Events
 
-Customize the editor appearance via CSS custom properties:
+| Event | Detail Type | Description |
+|-------|-------------|-------------|
+| `change` | `SpelEditorDetail` | Fired when the expression value changes. Detail contains `{ value: string; isValid: boolean }` |
 
-```css
-spel-editor {
-  --spel-bg: #1e1e2e;
-  --spel-fg: #cdd6f4;
-  --spel-font-family: 'Fira Code', monospace;
-  --spel-border-color: #45475a;
-}
-```
+### CSS Custom Properties
 
-Full API documentation is coming soon.
+| Property | Default | Description |
+|----------|---------|-------------|
+| `--spel-bg` | `#ffffff` | Editor background |
+| `--spel-font-family` | `'JetBrains Mono', monospace` | Editor font |
+| `--spel-font-size` | `14px` | Editor font size |
+| `--spel-line-height` | `1.6` | Editor line height |
+| `--spel-cursor` | `#111827` | Cursor color |
+| `--spel-line-highlight` | `#f3f4f6` | Active line highlight color |
+| `--spel-selection-bg` | `#bfdbfe` | Selection background color |
+| `--spel-gutter-bg` | `#f9fafb` | Gutter background |
+| `--spel-gutter-fg` | `#9ca3af` | Gutter foreground (line numbers) |
+| `--spel-border-width` | `1px` | Editor border width |
+| `--spel-border-color` | `#d0d5dd` | Editor border color |
+| `--spel-border-radius` | `6px` | Editor border radius |
 
 ## License
 

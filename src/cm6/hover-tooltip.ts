@@ -1,9 +1,20 @@
 import { hoverTooltip } from '@codemirror/view';
-import { AstWalker, NodeType, SpelExpressionParser } from '@agentix-e/spel-ts';
+import {
+  AstWalker,
+  NodeType,
+  SpelExpressionParser,
+  VariableReference,
+  PropertyOrFieldReference,
+  BeanReference,
+  TypeReference,
+} from '@agentix-e/spel-ts';
 import type { SpelNodeImpl } from '@agentix-e/spel-ts';
 
 /**
  * Adapter: spel-ts AstWalker → CM6 hoverTooltip.
+ *
+ * Uses `instanceof` checks against concrete spel-ts node classes
+ * (exported in v1.1.0) instead of brittle `as unknown as` casts.
  */
 export function spelHover() {
   return hoverTooltip((view, pos) => {
@@ -39,20 +50,20 @@ export function spelHover() {
 function getNodeInfo(node: SpelNodeImpl): string | null {
   switch (node.nodeType) {
     case NodeType.VARIABLE_REFERENCE: {
-      const name = (node as unknown as { getVariableName?: () => string }).getVariableName?.();
-      return name ? `Variable: #${name}` : null;
+      if (!(node instanceof VariableReference)) return null;
+      return `Variable: #${node.getVariableName()}`;
     }
     case NodeType.PROPERTY_OR_FIELD_REFERENCE: {
-      const name = (node as unknown as { getName?: () => string }).getName?.();
-      return name ? `Property: .${name}` : null;
+      if (!(node instanceof PropertyOrFieldReference)) return null;
+      return `Property: .${node.getName()}`;
     }
     case NodeType.BEAN_REFERENCE: {
-      const name = (node as unknown as { getBeanName?: () => string }).getBeanName?.();
-      return name ? `Spring Bean: @${name}` : null;
+      if (!(node instanceof BeanReference)) return null;
+      return `Spring Bean: @${node.getBeanName()}`;
     }
     case NodeType.TYPE_REFERENCE: {
-      const name = (node as unknown as { getTypeName?: () => string }).getTypeName?.();
-      return name ? `Type: T(${name})` : null;
+      if (!(node instanceof TypeReference)) return null;
+      return `Type: T(${node.getTypeName()})`;
     }
     default:
       return null;
