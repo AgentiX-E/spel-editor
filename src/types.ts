@@ -1,4 +1,4 @@
-import type { ContextSchema } from '@agentix-e/spel-ts';
+import type { ContextSchema } from "@agentix-e/spel-ts";
 
 /** Editor configuration */
 export interface EditorConfig {

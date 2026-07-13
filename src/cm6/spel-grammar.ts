@@ -8,11 +8,8 @@
  * For incremental parsing and richer editor features, a full Lezer grammar
  * can be added later via @lezer/generator build pipeline.
  */
-import {
-  type StringStream,
-  StreamLanguage,
-} from '@codemirror/language';
-import { Tokenizer as SpelTokenizer, TokenKind } from '@agentix-e/spel-ts';
+import { type StringStream, StreamLanguage } from "@codemirror/language";
+import { Tokenizer as SpelTokenizer, TokenKind } from "@agentix-e/spel-ts";
 
 /**
  * Map spel-ts TokenKind to CM6 highlight style.
@@ -21,28 +18,28 @@ function tokenKindToStyle(kind: TokenKind): string {
   switch (kind) {
     // Keywords
     case TokenKind.LITERAL_NULL:
-      return 'keyword';
+      return "keyword";
     case TokenKind.LITERAL_BOOLEAN:
-      return 'bool';
+      return "bool";
     case TokenKind.MATCHES:
     case TokenKind.BETWEEN:
     case TokenKind.INSTANCEOF:
     case TokenKind.MOD:
     case TokenKind.NEW:
-      return 'keyword';
+      return "keyword";
     // Literals
     case TokenKind.LITERAL_INT:
     case TokenKind.LITERAL_LONG:
     case TokenKind.LITERAL_FLOAT:
     case TokenKind.LITERAL_DOUBLE:
     case TokenKind.LITERAL_HEX:
-      return 'number';
+      return "number";
     case TokenKind.LITERAL_STRING:
-      return 'string';
+      return "string";
     // Variables
     case TokenKind.IDENTIFIER:
       // Could be a variable reference if preceded by #, handled below
-      return 'variableName';
+      return "variableName";
     // Operators
     case TokenKind.PLUS:
     case TokenKind.MINUS:
@@ -53,7 +50,7 @@ function tokenKindToStyle(kind: TokenKind): string {
     case TokenKind.INC:
     case TokenKind.DEC:
     case TokenKind.ASSIGN:
-      return 'operator';
+      return "operator";
     // Comparison
     case TokenKind.EQ:
     case TokenKind.NE:
@@ -64,12 +61,12 @@ function tokenKindToStyle(kind: TokenKind): string {
     case TokenKind.AND:
     case TokenKind.OR:
     case TokenKind.NOT:
-      return 'operator';
+      return "operator";
     // Type/Bean references
     case TokenKind.HASH:
     case TokenKind.AT:
     case TokenKind.AMP_AT:
-      return 'typeName';
+      return "typeName";
     // Punctuation
     case TokenKind.LPAREN:
     case TokenKind.RPAREN:
@@ -84,18 +81,18 @@ function tokenKindToStyle(kind: TokenKind): string {
     case TokenKind.QMARK:
     case TokenKind.ELVIS:
     case TokenKind.DOTDOT:
-      return 'punctuation';
+      return "punctuation";
     // Selection/Projection
     case TokenKind.PROJECTION:
     case TokenKind.SELECTION:
     case TokenKind.SELECT_FIRST:
     case TokenKind.SELECT_LAST:
-      return 'operatorKeyword';
+      return "operatorKeyword";
     // Type
     case TokenKind.TYPE_START:
-      return 'typeName';
+      return "typeName";
     default:
-      return '';
+      return "";
   }
 }
 
@@ -111,11 +108,22 @@ export function createSpelStreamParser() {
       // Tokenize entire input on first call
       if (!_tokenizer || _tokenIndex === 0) {
         _tokenizer = new SpelTokenizer(stream.string);
-        const rawTokens = _tokenizer.tokenize();
+        let rawTokens: ReturnType<SpelTokenizer["tokenize"]>;
+        try {
+          rawTokens = _tokenizer.tokenize();
+        } catch {
+          // Tokenizer threw on invalid input (e.g. unterminated string) —
+          // treat entire content as unhighlighted plain text
+          _tokens = [];
+          _tokenIndex = 0;
+          stream.skipToEnd();
+          return null;
+        }
         _tokens = [];
         _tokenIndex = 0;
 
-        for (let i = 0; i < rawTokens.length - 1; i++) { // Skip EOF
+        for (let i = 0; i < rawTokens.length - 1; i++) {
+          // Skip EOF
           const tok = rawTokens[i]!;
           const style = tokenKindToStyle(tok.kind);
 
@@ -124,12 +132,23 @@ export function createSpelStreamParser() {
             const prevTok = i > 0 ? rawTokens[i - 1] : null;
             if (prevTok?.kind === TokenKind.HASH) {
               // #variableName — highlight the variable name
-              _tokens.push({ from: tok.startPos, to: tok.endPos, style: 'variableName' });
+              _tokens.push({
+                from: tok.startPos,
+                to: tok.endPos,
+                style: "variableName",
+              });
               continue;
             }
-            if (prevTok?.kind === TokenKind.DOT || prevTok?.kind === TokenKind.SAFE_NAV) {
+            if (
+              prevTok?.kind === TokenKind.DOT ||
+              prevTok?.kind === TokenKind.SAFE_NAV
+            ) {
               // .property or ?.property
-              _tokens.push({ from: tok.startPos, to: tok.endPos, style: 'propertyName' });
+              _tokens.push({
+                from: tok.startPos,
+                to: tok.endPos,
+                style: "propertyName",
+              });
               continue;
             }
           }

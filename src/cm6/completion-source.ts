@@ -1,5 +1,12 @@
-import { type CompletionSource, type CompletionContext } from '@codemirror/autocomplete';
-import { SpelCompletionEngine, type CompletionItem, type ContextSchema } from '@agentix-e/spel-ts';
+import {
+  type CompletionSource,
+  type CompletionContext,
+} from "@codemirror/autocomplete";
+import {
+  SpelCompletionEngine,
+  type CompletionItem,
+  type ContextSchema,
+} from "@agentix-e/spel-ts";
 
 /**
  * Adapter: spel-ts CompletionEngine → CM6 CompletionSource.
@@ -16,13 +23,17 @@ export function spelCompletion(
     const position = context.pos;
     const schema = getContextSchema?.() ?? undefined;
 
-    const items = SpelCompletionEngine.getCompletions(expression, position, schema);
+    const items = SpelCompletionEngine.getCompletions(
+      expression,
+      position,
+      schema,
+    );
 
     const validFor = /\w*/;
 
     return {
-      from: (context.matchBefore(validFor)?.from) ?? position,
-      options: items.map(item => mapToCM6Completion(item)),
+      from: context.matchBefore(validFor)?.from ?? position,
+      options: items.map((item) => mapToCM6Completion(item)),
       // Allow completions at any position
       validFor: () => true,
     };
@@ -47,13 +58,21 @@ function mapToCM6Completion(item: CompletionItem) {
 
 function mapKindToCM6Type(kind: string): string {
   switch (kind) {
-    case 'keyword': return 'keyword';
-    case 'operator': return 'operator';
-    case 'variable': return 'variable';
-    case 'property': return 'property';
-    case 'method': return 'method';
-    case 'function': return 'function';
-    case 'type': return 'type';
-    default: return 'text';
+    case "keyword":
+      return "keyword";
+    case "operator":
+      return "operator";
+    case "variable":
+      return "variable";
+    case "property":
+      return "property";
+    case "method":
+      return "method";
+    case "function":
+      return "function";
+    case "type":
+      return "type";
+    default:
+      return "text";
   }
 }

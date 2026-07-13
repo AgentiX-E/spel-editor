@@ -1,5 +1,5 @@
-import { LanguageSupport } from '@codemirror/language';
-import { createSpelStreamParser } from './spel-grammar.js';
+import { LanguageSupport } from "@codemirror/language";
+import { createSpelStreamParser } from "./spel-grammar.js";
 
 /**
  * SpEL language support for CodeMirror 6.

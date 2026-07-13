@@ -1,19 +1,23 @@
-import { LitElement, html, css, type PropertyValues } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
-import { EditorView, keymap, placeholder as cmPlaceholder } from '@codemirror/view';
-import { EditorState, type Extension } from '@codemirror/state';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { closeBrackets, autocompletion } from '@codemirror/autocomplete';
-import { linter } from '@codemirror/lint';
+import { LitElement, html, css, type PropertyValues } from "lit";
+import { customElement, property, query } from "lit/decorators.js";
+import {
+  EditorView,
+  keymap,
+  placeholder as cmPlaceholder,
+} from "@codemirror/view";
+import { EditorState, type Extension } from "@codemirror/state";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { closeBrackets, autocompletion } from "@codemirror/autocomplete";
+import { linter } from "@codemirror/lint";
 
-import { spelLanguage } from './cm6/spel-language.js';
-import { spelCompletion } from './cm6/completion-source.js';
-import { spelLint } from './cm6/lint-source.js';
-import { spelHover } from './cm6/hover-tooltip.js';
-import { SpelFormatter, SpelDiagnosticEngine } from '@agentix-e/spel-ts';
+import { spelLanguage } from "./cm6/spel-language.js";
+import { spelCompletion } from "./cm6/completion-source.js";
+import { spelLint } from "./cm6/lint-source.js";
+import { spelHover } from "./cm6/hover-tooltip.js";
+import { SpelFormatter, SpelDiagnosticEngine } from "@agentix-e/spel-ts";
 
-import type { SpelEditorDetail } from './types.js';
-import type { ContextSchema, SpelDiagnostic } from '@agentix-e/spel-ts';
+import type { SpelEditorDetail } from "./types.js";
+import type { ContextSchema, SpelDiagnostic } from "@agentix-e/spel-ts";
 
 const EDITOR_STYLES = css`
   :host {
@@ -24,20 +28,28 @@ const EDITOR_STYLES = css`
   }
   .cm-editor {
     height: 100%;
-    font-family: var(--spel-font-family, 'JetBrains Mono', monospace);
+    font-family: var(--spel-font-family, "JetBrains Mono", monospace);
     font-size: var(--spel-font-size, 14px);
     line-height: var(--spel-line-height, 1.6);
   }
-  .cm-editor.cm-focused { outline: none; }
-  .cm-editor .cm-scroller { overflow: auto; }
-  .cm-editor .cm-content { caret-color: var(--spel-cursor, #111827); }
-  .cm-editor .cm-cursor, .cm-editor .cm-dropCursor {
+  .cm-editor.cm-focused {
+    outline: none;
+  }
+  .cm-editor .cm-scroller {
+    overflow: auto;
+  }
+  .cm-editor .cm-content {
+    caret-color: var(--spel-cursor, #111827);
+  }
+  .cm-editor .cm-cursor,
+  .cm-editor .cm-dropCursor {
     border-left-color: var(--spel-cursor, #111827);
   }
   .cm-editor .cm-activeLine {
     background-color: var(--spel-line-highlight, #f3f4f6);
   }
-  .cm-editor .cm-selectionBackground, .cm-editor.cm-focused .cm-selectionBackground {
+  .cm-editor .cm-selectionBackground,
+  .cm-editor.cm-focused .cm-selectionBackground {
     background: var(--spel-selection-bg, #bfdbfe) !important;
   }
   .cm-editor .cm-gutters {
@@ -50,18 +62,18 @@ const EDITOR_STYLES = css`
 /**
  * `<spel-editor>` — Web-embeddable SpEL expression editor.
  */
-@customElement('spel-editor')
+@customElement("spel-editor")
 export class SpelEditor extends LitElement {
   static override styles = EDITOR_STYLES;
 
   @property({ type: String })
-  value = '';
+  value = "";
 
   @property({ type: Object, attribute: false })
   contextSchema: ContextSchema | null = null;
 
   @property({ type: String })
-  placeholder = 'Enter SpEL expression...';
+  placeholder = "Enter SpEL expression...";
 
   @property({ type: Boolean, reflect: true })
   readonly = false;
@@ -69,10 +81,10 @@ export class SpelEditor extends LitElement {
   @property({ type: Boolean, reflect: true })
   disabled = false;
 
-  @property({ type: String, attribute: 'min-height' })
-  minHeight = '80px';
+  @property({ type: String, attribute: "min-height" })
+  minHeight = "80px";
 
-  @query('.cm-container')
+  @query(".cm-container")
   private containerEl!: HTMLElement;
 
   private editorView: EditorView | null = null;
@@ -83,6 +95,11 @@ export class SpelEditor extends LitElement {
     return html`
       <div
         class="cm-container"
+        role="textbox"
+        aria-label=${this.placeholder}
+        aria-readonly=${this.readonly ? "true" : "false"}
+        aria-disabled=${this.disabled ? "true" : "false"}
+        tabindex="0"
         style="
           min-height: ${this.minHeight};
           border: var(--spel-border-width, 1px) solid var(--spel-border-color, #d0d5dd);
@@ -98,12 +115,16 @@ export class SpelEditor extends LitElement {
   }
 
   override updated(changed: PropertyValues) {
-    if (changed.has('disabled') || changed.has('readonly')) {
+    if (changed.has("disabled") || changed.has("readonly")) {
       this.#updateEditorState();
     }
     // Re-create editor if it was destroyed (e.g. after re-attach to DOM)
     if (!this.editorView && this.containerEl) {
       this.#createEditor();
+    }
+    // Re-run diagnostics when context schema changes
+    if (changed.has("contextSchema")) {
+      this.#scheduleDiagnostics();
     }
   }
 
@@ -137,7 +158,11 @@ export class SpelEditor extends LitElement {
     this.value = value;
     if (this.editorView) {
       this.editorView.dispatch({
-        changes: { from: 0, to: this.editorView.state.doc.length, insert: value },
+        changes: {
+          from: 0,
+          to: this.editorView.state.doc.length,
+          insert: value,
+        },
         selection: { anchor: value.length },
       });
       this.#scheduleDiagnostics();
@@ -166,7 +191,11 @@ export class SpelEditor extends LitElement {
     const formatted = SpelFormatter.format(current);
     if (formatted && formatted !== current) {
       this.editorView.dispatch({
-        changes: { from: 0, to: this.editorView.state.doc.length, insert: formatted },
+        changes: {
+          from: 0,
+          to: this.editorView.state.doc.length,
+          insert: formatted,
+        },
         selection: { anchor: formatted.length },
       });
     }
@@ -195,8 +224,13 @@ export class SpelEditor extends LitElement {
    */
   #runDiagnostics() {
     if (!this.editorView) return;
+    const expr = this.editorView.state.sliceDoc();
+    if (expr.trim().length === 0) {
+      this.diagnosticCache = [];
+      return;
+    }
     this.diagnosticCache = SpelDiagnosticEngine.validate(
-      this.editorView.state.sliceDoc(),
+      expr,
       this.contextSchema ?? undefined,
     );
   }
@@ -211,7 +245,7 @@ export class SpelEditor extends LitElement {
       closeBrackets(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       cmPlaceholder(this.placeholder),
-      EditorView.updateListener.of(update => {
+      EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           this.value = update.state.sliceDoc();
           this.#fireChange();
@@ -240,11 +274,20 @@ export class SpelEditor extends LitElement {
   }
 
   #fireChange() {
+    // Run a synchronous syntax check to determine validity immediately.
+    // The debounced full validation (semantic + context + type) is handled
+    // by #scheduleDiagnostics, but the change event fires now so consumers
+    // get an accurate isValid reading without a 300ms delay.
+    // Empty expressions are considered valid (no expression = no error).
+    const expr = this.value.trim();
+    const syntaxDiags =
+      expr.length === 0 ? [] : SpelDiagnosticEngine.checkSyntax(this.value);
     const detail: SpelEditorDetail = {
       value: this.value,
-      isValid: this.diagnosticCache.length === 0 ||
-        !this.diagnosticCache.some(d => d.severity === 'error'),
+      isValid: syntaxDiags.length === 0,
     };
-    this.dispatchEvent(new CustomEvent('change', { detail, bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("change", { detail, bubbles: true, composed: true }),
+    );
   }
 }
