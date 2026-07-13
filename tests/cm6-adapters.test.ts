@@ -15,7 +15,11 @@ import { spelLanguage } from "../src/cm6/spel-language.js";
 import { createSpelStreamParser } from "../src/cm6/spel-grammar.js";
 import { spelCompletion } from "../src/cm6/completion-source.js";
 import { spelLint } from "../src/cm6/lint-source.js";
-import { spelHover, createHoverSource, getNodeInfo } from "../src/cm6/hover-tooltip.js";
+import {
+  spelHover,
+  createHoverSource,
+  getNodeInfo,
+} from "../src/cm6/hover-tooltip.js";
 import {
   SpelExpressionParser,
   AstWalker,
