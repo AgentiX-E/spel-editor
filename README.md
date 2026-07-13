@@ -3,7 +3,7 @@
 > Web-embeddable Spring Expression Language (SpEL) editor.
 > Based on CodeMirror 6 + spel-ts v1.1.0. Framework-agnostic Web Component.
 
-[![npm version](https://img.shields.io/npm/v/@agentix-e/spel-editor)](https://www.npmjs.com/package/@agentix-e/spel-editor)
+[![GitHub](https://img.shields.io/badge/GitHub-AgentiX--E%2Fspel--editor-blue)](https://github.com/AgentiX-E/spel-editor)
 
 ## Quick Start
 
@@ -86,5 +86,9 @@ npm install @agentix-e/spel-editor
 | `--spel-border-radius` | `6px` | Editor border radius |
 
 ## License
+
+## Ecosystem
+- [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — Core SpEL parser and evaluator
+- [@agentix-e/nl2spel](https://github.com/AgentiX-E/nl2spel) — Natural language → SpEL generation (optional)
 
 MIT © AgentiX-E

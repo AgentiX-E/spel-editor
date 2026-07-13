@@ -40,6 +40,14 @@
     "@codemirror/view": "^6.0.0",
     "lit": "^3.0.0"
   },
+  "peerDependencies": {
+    "@agentix-e/nl2spel": ">=1.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@agentix-e/nl2spel": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.0.0",
     "jsdom": "^29.1.1",

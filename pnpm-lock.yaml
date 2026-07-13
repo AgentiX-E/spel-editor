@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@agentix-e/nl2spel':
+        specifier: '>=1.1.0'
+        version: 1.1.1(@agentix-e/spel-ts@1.1.0)
       '@agentix-e/spel-ts':
         specifier: ^1.1.0
         version: 1.1.0
@@ -53,6 +56,14 @@ importers:
         version: 3.2.7(jsdom@29.1.1)
 
 packages:
+
+  '@agentix-e/nl2spel@1.1.1':
+    resolution: {integrity: sha512-BGM/PBo9XAagHRfQlBCFMSoN4cw36VOG0RivgW9W6Rf6WHYNTvdMPgRoxV/SJcCvMIZbzBhQdyXz9ARzu6sNWA==}
+    peerDependencies:
+      '@agentix-e/spel-ts': '>=1.1.0'
+    peerDependenciesMeta:
+      '@agentix-e/spel-ts':
+        optional: true
 
   '@agentix-e/spel-ts@1.1.0':
     resolution: {integrity: sha512-Defy8oekvloU+vf+xD7DLlbe0yDOI9hubtWm4Uk9pH63O0Sk5KWf7UeRtLMVewCWOCy1xMeNFov2GkW9CFQ6WA==}
@@ -1375,6 +1386,10 @@ packages:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
 snapshots:
+
+  '@agentix-e/nl2spel@1.1.1(@agentix-e/spel-ts@1.1.0)':
+    optionalDependencies:
+      '@agentix-e/spel-ts': 1.1.0
 
   '@agentix-e/spel-ts@1.1.0': {}
 
