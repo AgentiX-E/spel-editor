@@ -1,13 +1,10 @@
-import {
-  type Diagnostic as CMDiagnostic,
-  type LintSource,
-} from "@codemirror/lint";
+import { type Diagnostic as CMDiagnostic, type LintSource } from '@codemirror/lint';
 import {
   SpelDiagnosticEngine,
   type ContextSchema,
   type SpelDiagnostic,
   DiagnosticSeverity,
-} from "@agentix-e/spel-ts";
+} from '@agentix-e/spel-ts';
 
 /**
  * Adapter: spel-ts DiagnosticEngine → CM6 LintSource.
@@ -15,9 +12,7 @@ import {
  * Runs syntax + semantic + context checks on each change
  * and maps SpelDiagnostic[] to CM6 Diagnostic[].
  */
-export function spelLint(
-  getContextSchema?: () => ContextSchema | null,
-): LintSource {
+export function spelLint(getContextSchema?: () => ContextSchema | null): LintSource {
   return (view) => {
     const expression = view.state.sliceDoc();
     const schema = getContextSchema?.() ?? undefined;
@@ -40,13 +35,13 @@ function mapToCM6Diagnostic(d: SpelDiagnostic): CMDiagnostic {
   };
 }
 
-function mapSeverity(sev: DiagnosticSeverity): "error" | "warning" | "info" {
+function mapSeverity(sev: DiagnosticSeverity): 'error' | 'warning' | 'info' {
   switch (sev) {
     case DiagnosticSeverity.ERROR:
-      return "error";
+      return 'error';
     case DiagnosticSeverity.WARNING:
-      return "warning";
+      return 'warning';
     case DiagnosticSeverity.INFO:
-      return "info";
+      return 'info';
   }
 }

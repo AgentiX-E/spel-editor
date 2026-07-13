@@ -1,5 +1,5 @@
-import { hoverTooltip } from "@codemirror/view";
-import type { EditorView } from "@codemirror/view";
+import { hoverTooltip } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 import {
   AstWalker,
   NodeType,
@@ -8,8 +8,8 @@ import {
   PropertyOrFieldReference,
   BeanReference,
   TypeReference,
-} from "@agentix-e/spel-ts";
-import type { SpelNodeImpl } from "@agentix-e/spel-ts";
+} from '@agentix-e/spel-ts';
+import type { SpelNodeImpl } from '@agentix-e/spel-ts';
 
 /**
  * Adapter: spel-ts AstWalker → CM6 hoverTooltip.
@@ -41,9 +41,8 @@ export function createHoverSource() {
         pos: node.startPos,
         end: node.endPos,
         create() {
-          const dom = document.createElement("div");
-          dom.style.cssText =
-            "padding: 4px 8px; font-size: 13px; max-width: 300px;";
+          const dom = document.createElement('div');
+          dom.style.cssText = 'padding: 4px 8px; font-size: 13px; max-width: 300px;';
           dom.textContent = info;
           return { dom };
         },
