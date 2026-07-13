@@ -5,6 +5,7 @@ import {
 import {
   SpelDiagnosticEngine,
   type ContextSchema,
+  type SpelDiagnostic,
   DiagnosticSeverity,
 } from "@agentix-e/spel-ts";
 
@@ -29,9 +30,7 @@ export function spelLint(
   };
 }
 
-function mapToCM6Diagnostic(
-  d: import("@agentix-e/spel-ts").SpelDiagnostic,
-): CMDiagnostic {
+function mapToCM6Diagnostic(d: SpelDiagnostic): CMDiagnostic {
   return {
     from: d.from,
     to: d.to,

@@ -4,10 +4,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { SpelEditor } from "../src/spel-editor.js";
 
-function waitForDebounce(ms = 400) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 describe("SpelEditor custom element", () => {
   it("custom element is defined", () => {
     expect(customElements.get("spel-editor")).toBe(SpelEditor);

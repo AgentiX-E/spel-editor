@@ -34,7 +34,7 @@ npm install @agentix-e/spel-editor
 - **Auto-completion** — Keyword, operator, variable, and context-aware suggestions
 - **Real-time diagnostics** — Syntax, semantic, and context validation
 - **Hover tooltips** — Node type information on hover
-- **Non-invasive theming** — 48 CSS custom properties for complete visual control
+- **Non-invasive theming** — 12 CSS custom properties for complete visual control
 - **Framework agnostic** — Works with React, Vue, Angular, Svelte, or plain HTML
 
 ## API Reference
@@ -66,6 +66,7 @@ npm install @agentix-e/spel-editor
 | Event | Detail Type | Description |
 |-------|-------------|-------------|
 | `change` | `SpelEditorDetail` | Fired when the expression value changes. Detail contains `{ value: string; isValid: boolean }` |
+| `validate` | `{ diagnostics: SpelDiagnostic[] }` | Fired after debounced diagnostics complete. Detail contains the diagnostic results |
 
 ### CSS Custom Properties
 

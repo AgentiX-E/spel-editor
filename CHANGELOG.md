@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 - Auto-completion with keyword, operator, and context-aware suggestions
 - Real-time diagnostics (syntax, semantic, and context validation)
 - Hover tooltips showing node type information
-- Non-invasive theming via 48 CSS custom properties
+- Non-invasive theming via 12 CSS custom properties
 - Programmatic API: `getValue()`, `setValue()`, `validate()`, `format()`, `insertSnippet()`
 - `change` event with `value` and `isValid` detail
 - Framework-agnostic — works with React, Vue, Angular, Svelte, or plain HTML

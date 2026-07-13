@@ -15,7 +15,17 @@ import { spelLanguage } from "../src/cm6/spel-language.js";
 import { createSpelStreamParser } from "../src/cm6/spel-grammar.js";
 import { spelCompletion } from "../src/cm6/completion-source.js";
 import { spelLint } from "../src/cm6/lint-source.js";
-import { spelHover } from "../src/cm6/hover-tooltip.js";
+import { spelHover, createHoverSource, getNodeInfo } from "../src/cm6/hover-tooltip.js";
+import {
+  SpelExpressionParser,
+  AstWalker,
+  NodeType,
+  VariableReference,
+  PropertyOrFieldReference,
+  BeanReference,
+  TypeReference,
+} from "@agentix-e/spel-ts";
+import type { SpelNodeImpl } from "@agentix-e/spel-ts";
 
 import type { ContextSchema } from "@agentix-e/spel-ts";
 
@@ -305,6 +315,8 @@ describe("Lint source", () => {
 });
 
 describe("Hover tooltip", () => {
+  const parser = new SpelExpressionParser();
+
   it("spelHover() returns a valid extension", () => {
     const extension = spelHover();
     expect(extension).toBeDefined();
@@ -320,7 +332,6 @@ describe("Hover tooltip", () => {
   it("hover works correctly for variable references", () => {
     const div = document.createElement("div");
     const view = createView("#myVar", [spelLanguage(), spelHover()], div);
-    // Editor renders the expression
     expect(
       div.querySelector(".cm-content")?.textContent?.trim().length,
     ).toBeGreaterThan(0);
@@ -346,5 +357,163 @@ describe("Hover tooltip", () => {
     const view = createView("invalid ))", [spelLanguage(), spelHover()], div);
     expect(div.querySelector(".cm-content")).not.toBeNull();
     view.destroy();
+  });
+
+  it("handles empty expression gracefully", () => {
+    const div = document.createElement("div");
+    const view = createView("", [spelLanguage(), spelHover()], div);
+    expect(div.querySelector(".cm-content")).not.toBeNull();
+    view.destroy();
+  });
+});
+
+describe("Hover tooltip source (createHoverSource)", () => {
+  it("returns null for empty expression", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("", [spelLanguage()], div);
+    const result = source(view, 0);
+    expect(result).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null for whitespace-only expression", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("   ", [spelLanguage()], div);
+    const result = source(view, 0);
+    expect(result).toBeNull();
+    view.destroy();
+  });
+
+  it("returns correct tooltip for variable references (#var)", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("#myVar", [spelLanguage()], div);
+    const result = source(view, 1);
+    expect(result).not.toBeNull();
+    if (result) {
+      const { dom } = result.create();
+      expect(dom.textContent).toBe("Variable: #myVar");
+    }
+    view.destroy();
+  });
+
+  it("returns correct tooltip for bean references (@bean)", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("@myBean", [spelLanguage()], div);
+    const result = source(view, 1);
+    expect(result).not.toBeNull();
+    if (result) {
+      const { dom } = result.create();
+      expect(dom.textContent).toBe("Spring Bean: @myBean");
+    }
+    view.destroy();
+  });
+
+  it("returns correct tooltip for property references (.prop)", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("#myVar.name", [spelLanguage()], div);
+    const result = source(view, 7);
+    expect(result).not.toBeNull();
+    if (result) {
+      const { dom } = result.create();
+      expect(dom.textContent).toBe("Property: .name");
+    }
+    view.destroy();
+  });
+
+  it("returns correct tooltip for type references (T(type))", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("T(String)", [spelLanguage()], div);
+    const result = source(view, 4);
+    expect(result).not.toBeNull();
+    if (result) {
+      const { dom } = result.create();
+      expect(dom.textContent).toBe("Type: T(String)");
+    }
+    view.destroy();
+  });
+
+  it("returns null for non-tooltipable node types", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("null", [spelLanguage()], div);
+    const result = source(view, 1);
+    expect(result).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null for syntax errors", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("invalid ))", [spelLanguage()], div);
+    const result = source(view, 5);
+    expect(result).toBeNull();
+    view.destroy();
+  });
+
+  it("returns null for position outside expression", () => {
+    const source = createHoverSource();
+    const div = document.createElement("div");
+    const view = createView("#myVar", [spelLanguage()], div);
+    const result = source(view, 999);
+    expect(result).toBeNull();
+    view.destroy();
+  });
+});
+
+describe("getNodeInfo", () => {
+  const parser = new SpelExpressionParser();
+
+  it("returns correct text for VARIABLE_REFERENCE", () => {
+    const ast = parser.parseRaw("#myVar");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBe("Variable: #myVar");
+  });
+
+  it("returns correct text for PROPERTY_OR_FIELD_REFERENCE", () => {
+    const ast = parser.parseRaw("#myVar.name");
+    const node = AstWalker.findNodeAt(ast, 7) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBe("Property: .name");
+  });
+
+  it("returns correct text for BEAN_REFERENCE", () => {
+    const ast = parser.parseRaw("@myBean");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBe("Spring Bean: @myBean");
+  });
+
+  it("returns correct text for TYPE_REFERENCE", () => {
+    const ast = parser.parseRaw("T(String)");
+    const node = AstWalker.findNodeAt(ast, 4) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBe("Type: T(String)");
+  });
+
+  it("returns null for NULL_LITERAL", () => {
+    const ast = parser.parseRaw("null");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBeNull();
+  });
+
+  it("returns null for BOOLEAN_LITERAL", () => {
+    const ast = parser.parseRaw("true");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBeNull();
+  });
+
+  it("returns null for INT_LITERAL", () => {
+    const ast = parser.parseRaw("42");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBeNull();
+  });
+
+  it("returns null for STRING_LITERAL", () => {
+    const ast = parser.parseRaw("'hello'");
+    const node = AstWalker.findNodeAt(ast, 1) as SpelNodeImpl;
+    expect(getNodeInfo(node)).toBeNull();
   });
 });

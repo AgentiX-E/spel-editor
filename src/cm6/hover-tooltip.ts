@@ -1,4 +1,5 @@
 import { hoverTooltip } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import {
   AstWalker,
   NodeType,
@@ -12,12 +13,17 @@ import type { SpelNodeImpl } from "@agentix-e/spel-ts";
 
 /**
  * Adapter: spel-ts AstWalker → CM6 hoverTooltip.
- *
- * Uses `instanceof` checks against concrete spel-ts node classes
- * (exported in v1.1.0) instead of brittle `as unknown as` casts.
  */
 export function spelHover() {
-  return hoverTooltip((view, pos) => {
+  return hoverTooltip(createHoverSource());
+}
+
+/**
+ * Create the hover tooltip source function for CM6.
+ * Exported for testing.
+ */
+export function createHoverSource() {
+  return (view: EditorView, pos: number) => {
     const expression = view.state.sliceDoc();
     if (expression.trim().length === 0) return null;
 
@@ -45,27 +51,23 @@ export function spelHover() {
     } catch {
       return null;
     }
-  });
+  };
 }
 
-function getNodeInfo(node: SpelNodeImpl): string | null {
+/**
+ * Get hover tooltip text for a given AST node.
+ * Exported for testing.
+ */
+export function getNodeInfo(node: SpelNodeImpl): string | null {
   switch (node.nodeType) {
-    case NodeType.VARIABLE_REFERENCE: {
-      if (!(node instanceof VariableReference)) return null;
-      return `Variable: #${node.getVariableName()}`;
-    }
-    case NodeType.PROPERTY_OR_FIELD_REFERENCE: {
-      if (!(node instanceof PropertyOrFieldReference)) return null;
-      return `Property: .${node.getName()}`;
-    }
-    case NodeType.BEAN_REFERENCE: {
-      if (!(node instanceof BeanReference)) return null;
-      return `Spring Bean: @${node.getBeanName()}`;
-    }
-    case NodeType.TYPE_REFERENCE: {
-      if (!(node instanceof TypeReference)) return null;
-      return `Type: T(${node.getTypeName()})`;
-    }
+    case NodeType.VARIABLE_REFERENCE:
+      return `Variable: #${(node as VariableReference).getVariableName()}`;
+    case NodeType.PROPERTY_OR_FIELD_REFERENCE:
+      return `Property: .${(node as PropertyOrFieldReference).getName()}`;
+    case NodeType.BEAN_REFERENCE:
+      return `Spring Bean: @${(node as BeanReference).getBeanName()}`;
+    case NodeType.TYPE_REFERENCE:
+      return `Type: T(${(node as TypeReference).getTypeName()})`;
     default:
       return null;
   }
