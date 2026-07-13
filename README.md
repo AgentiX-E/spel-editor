@@ -87,8 +87,9 @@ npm install @agentix-e/spel-editor
 
 ## License
 
+MIT © AgentiX-E
+
 ## Ecosystem
+
 - [@agentix-e/spel-ts](https://github.com/AgentiX-E/spel-ts) — Core SpEL parser and evaluator
 - [@agentix-e/nl2spel](https://github.com/AgentiX-E/nl2spel) — Natural language → SpEL generation (optional)
-
-MIT © AgentiX-E
