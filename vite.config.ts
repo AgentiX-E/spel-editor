@@ -1,22 +1,12 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: '.',
+  root: 'public',
   server: {
     port: 4173,
+    fs: {
+      allow: ['..'],
+    },
   },
-  optimizeDeps: {
-    include: [
-      '@agentix-e/spel-ts',
-      '@agentix-e/nl2spel',
-      '@agentix-e/nl2spel-openai',
-      'lit',
-      '@codemirror/view',
-      '@codemirror/state',
-      '@codemirror/language',
-      '@codemirror/autocomplete',
-      '@codemirror/lint',
-      '@codemirror/commands',
-    ],
-  },
+  build: { outDir: '../dist-demo' },
 });

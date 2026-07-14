@@ -34,5 +34,22 @@ jobs:
       - name: Build
         run: pnpm build
 
-  # Browser tests: run locally via `pnpm test:browser` (requires Playwright).
-  # ESM imports need a bundler (Vite) in CI — will be added in a future PR.
+  browser-tests:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run browser tests
+        run: pnpm test:browser

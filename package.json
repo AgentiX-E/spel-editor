@@ -82,6 +82,9 @@
     "url": "https://github.com/AgentiX-E/spel-editor/issues"
   },
   "homepage": "https://github.com/AgentiX-E/spel-editor#readme",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
   "publishConfig": {
     "access": "public"
   }

@@ -6,78 +6,32 @@
  * NL integration with nl2spel via DeepSeek.
  */
 import { test, expect } from '@playwright/test';
-import { readFileSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY ?? '';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const DIST_DIR = resolve(__dirname, '..', 'dist');
-const EDITOR_JS = resolve(DIST_DIR, 'index.js');
-
-// Serve the built editor from the local file system
-async function setupEditorPage(page: import('@playwright/test').Page) {
-  // Intercept the import to serve from local dist
-  await page.route('**/spel-editor.js', async (route) => {
-    if (existsSync(EDITOR_JS)) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/javascript',
-        body: readFileSync(EDITOR_JS, 'utf-8'),
-      });
-    } else {
-      await route.continue();
-    }
-  });
-
-  // Load a minimal page
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"><title>Test</title></head>
-    <body>
-      <spel-editor id="editor" min-height="100px" placeholder="Enter SpEL..."></spel-editor>
-      <div id="output"></div>
-      <script type="module">
-        import { SpelEditor } from '/spel-editor.js';
-        customElements.define('spel-editor', SpelEditor);
-        window.spelEditorReady = true;
-      </script>
-    </body>
-    </html>
-  `);
-
-  // Wait for component to define
-  await page.waitForFunction(
-    () => (window as unknown as Record<string, unknown>).spelEditorReady === true,
-  );
-}
-
 test.describe('<spel-editor> browser rendering', () => {
   test('renders the editor component', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     const editor = page.locator('spel-editor');
     await expect(editor).toBeVisible();
   });
 
   test('CodeMirror editor is created inside', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     const cmEditor = page.locator('spel-editor .cm-editor');
     await expect(cmEditor).toBeVisible();
   });
 
   test('placeholder is displayed', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     const placeholder = page.locator('.cm-placeholder');
-    await expect(placeholder).toHaveText('Enter SpEL...');
+    await expect(placeholder).toHaveText('Enter SpEL expression...');
   });
 });
 
 test.describe('keyboard input and events', () => {
   test('typing updates content and fires change event', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).lastChange = null;
@@ -98,7 +52,7 @@ test.describe('keyboard input and events', () => {
   });
 
   test('change event reports isValid: true for valid expression', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).lastValid = null;
@@ -121,7 +75,7 @@ test.describe('keyboard input and events', () => {
   });
 
   test('change event reports isValid: false for invalid expression', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).lastInvalid = null;
@@ -146,7 +100,7 @@ test.describe('keyboard input and events', () => {
 
 test.describe('public API methods', () => {
   test('getValue() and setValue() work correctly', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor') as unknown as {
         setValue: (v: string) => void;
@@ -161,7 +115,7 @@ test.describe('public API methods', () => {
   });
 
   test('format() reformats expression', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor') as unknown as {
         setValue: (v: string) => void;
@@ -180,7 +134,7 @@ test.describe('public API methods', () => {
   });
 
   test('validate() returns diagnostics array', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor') as unknown as {
         setValue: (v: string) => void;
@@ -197,7 +151,7 @@ test.describe('public API methods', () => {
 
 test.describe('validate event', () => {
   test('validate event fires after typing', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
     await page.evaluate(() => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).validateEvent = null;
@@ -221,7 +175,7 @@ test.describe('validate event', () => {
 
 test.describe('NL integration', () => {
   test('nl2spel pattern matching in browser', async ({ page }) => {
-    await setupEditorPage(page);
+    await page.goto('/');
 
     const result = await page.evaluate(async () => {
       try {

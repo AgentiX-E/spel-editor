@@ -29,6 +29,9 @@
       placeholder="Enter SpEL expression..."
     ></spel-editor>
     <div id="output"></div>
-    <script type="module" src="./test-app.js"></script>
+    <script type="module">
+      import { SpelEditor } from '../dist/index.js';
+      customElements.define('spel-editor', SpelEditor);
+    </script>
   </body>
 </html>
