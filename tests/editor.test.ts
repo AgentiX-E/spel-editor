@@ -245,3 +245,47 @@ describe('SpelEditor error paths', () => {
     editor.remove();
   });
 });
+
+// Coverage: read-only and disabled mode (spel-editor.ts lines 274-275)
+describe('SpelEditor readonly and disabled', () => {
+  it('sets readonly attribute and creates editor', async () => {
+    const editor = document.createElement('spel-editor') as SpelEditor;
+    editor.setAttribute('readonly', '');
+    document.body.appendChild(editor);
+    await editor.updateComplete;
+    expect(editor.readonly).toBe(true);
+    expect(editor.getEditorView()).not.toBeNull();
+    editor.remove();
+  });
+
+  it('sets disabled attribute and creates editor', async () => {
+    const editor = document.createElement('spel-editor') as SpelEditor;
+    editor.setAttribute('disabled', '');
+    document.body.appendChild(editor);
+    await editor.updateComplete;
+    expect(editor.disabled).toBe(true);
+    expect(editor.getEditorView()).not.toBeNull();
+    editor.remove();
+  });
+});
+
+// Coverage: empty expression diagnostic clearing (spel-editor.ts lines 241-243)
+describe('SpelEditor empty diagnostics', () => {
+  it('clears diagnostic cache for empty expression after debounce', async () => {
+    const editor = document.createElement('spel-editor') as SpelEditor;
+    document.body.appendChild(editor);
+
+    // Set a value then clear it to trigger diagnostic run with empty expression
+    editor.setValue('#var');
+    editor.setValue('');
+
+    // Wait for debounce
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // validate() should return empty array for empty expression
+    const result = editor.validate();
+    expect(result).toEqual([]);
+
+    editor.remove();
+  });
+});

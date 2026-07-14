@@ -652,6 +652,7 @@ describe('Grammar — branch coverage via direct token parser', () => {
       TokenKind.LPAREN,
       TokenKind.PROJECTION,
       TokenKind.MATCHES,
+      TokenKind.TYPE_START,
     ];
     for (const kind of testKinds) {
       const style = tokenKindToStyle(kind);
