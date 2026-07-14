@@ -50,7 +50,9 @@ async function setupEditorPage(page: import('@playwright/test').Page) {
   `);
 
   // Wait for component to define
-  await page.waitForFunction(() => (window as unknown as Record<string, unknown>).spelEditorReady === true);
+  await page.waitForFunction(
+    () => (window as unknown as Record<string, unknown>).spelEditorReady === true,
+  );
 }
 
 test.describe('<spel-editor> browser rendering', () => {
@@ -88,7 +90,9 @@ test.describe('keyboard input and events', () => {
     await editor.click();
     await page.keyboard.type('2 + 3');
 
-    const detail = await page.evaluate(() => (window as unknown as Record<string, unknown>).lastChange) as { value: string; isValid: boolean } | null;
+    const detail = (await page.evaluate(
+      () => (window as unknown as Record<string, unknown>).lastChange,
+    )) as { value: string; isValid: boolean } | null;
     expect(detail).not.toBeNull();
     expect(detail!.value).toContain('2 + 3');
   });
@@ -99,7 +103,9 @@ test.describe('keyboard input and events', () => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).lastValid = null;
       el.addEventListener('change', (e) => {
-        (window as unknown as Record<string, unknown>).lastValid = (e as CustomEvent).detail.isValid;
+        (window as unknown as Record<string, unknown>).lastValid = (
+          e as CustomEvent
+        ).detail.isValid;
       });
     });
 
@@ -108,7 +114,9 @@ test.describe('keyboard input and events', () => {
     await page.keyboard.type('2 + 3');
     await page.waitForTimeout(500);
 
-    const isValid = await page.evaluate(() => (window as unknown as Record<string, unknown>).lastValid);
+    const isValid = await page.evaluate(
+      () => (window as unknown as Record<string, unknown>).lastValid,
+    );
     expect(isValid).toBe(true);
   });
 
@@ -118,7 +126,9 @@ test.describe('keyboard input and events', () => {
       const el = document.querySelector('spel-editor')!;
       (window as unknown as Record<string, unknown>).lastInvalid = null;
       el.addEventListener('change', (e) => {
-        (window as unknown as Record<string, unknown>).lastInvalid = (e as CustomEvent).detail.isValid;
+        (window as unknown as Record<string, unknown>).lastInvalid = (
+          e as CustomEvent
+        ).detail.isValid;
       });
     });
 
@@ -127,7 +137,9 @@ test.describe('keyboard input and events', () => {
     await page.keyboard.type('1 +');
     await page.waitForTimeout(500);
 
-    const isValid = await page.evaluate(() => (window as unknown as Record<string, unknown>).lastInvalid);
+    const isValid = await page.evaluate(
+      () => (window as unknown as Record<string, unknown>).lastInvalid,
+    );
     expect(isValid).toBe(false);
   });
 });
@@ -136,7 +148,10 @@ test.describe('public API methods', () => {
   test('getValue() and setValue() work correctly', async ({ page }) => {
     await setupEditorPage(page);
     await page.evaluate(() => {
-      const el = document.querySelector('spel-editor') as unknown as { setValue: (v: string) => void; getValue: () => string };
+      const el = document.querySelector('spel-editor') as unknown as {
+        setValue: (v: string) => void;
+        getValue: () => string;
+      };
       el.setValue('#score > 60');
       (window as unknown as Record<string, unknown>).val = el.getValue();
     });
@@ -148,20 +163,29 @@ test.describe('public API methods', () => {
   test('format() reformats expression', async ({ page }) => {
     await setupEditorPage(page);
     await page.evaluate(() => {
-      const el = document.querySelector('spel-editor') as unknown as { setValue: (v: string) => void; format: () => void; getValue: () => string };
+      const el = document.querySelector('spel-editor') as unknown as {
+        setValue: (v: string) => void;
+        format: () => void;
+        getValue: () => string;
+      };
       el.setValue('1+2*3');
       el.format();
       (window as unknown as Record<string, unknown>).formatted = el.getValue();
     });
 
-    const formatted = await page.evaluate(() => (window as unknown as Record<string, unknown>).formatted);
+    const formatted = await page.evaluate(
+      () => (window as unknown as Record<string, unknown>).formatted,
+    );
     expect(formatted).not.toBe('1+2*3');
   });
 
   test('validate() returns diagnostics array', async ({ page }) => {
     await setupEditorPage(page);
     await page.evaluate(() => {
-      const el = document.querySelector('spel-editor') as unknown as { setValue: (v: string) => void; validate: () => unknown[] };
+      const el = document.querySelector('spel-editor') as unknown as {
+        setValue: (v: string) => void;
+        validate: () => unknown[];
+      };
       el.setValue('1 + 2');
       (window as unknown as Record<string, unknown>).diags = el.validate();
     });
@@ -187,7 +211,9 @@ test.describe('validate event', () => {
     await page.keyboard.type('1 + 2');
     await page.waitForTimeout(500);
 
-    const detail = await page.evaluate(() => (window as unknown as Record<string, unknown>).validateEvent) as { diagnostics: unknown[] } | null;
+    const detail = (await page.evaluate(
+      () => (window as unknown as Record<string, unknown>).validateEvent,
+    )) as { diagnostics: unknown[] } | null;
     expect(detail).not.toBeNull();
     expect(Array.isArray(detail!.diagnostics)).toBe(true);
   });
@@ -228,7 +254,8 @@ test.describe('NL integration', () => {
     const result = await page.evaluate(async (apiKey) => {
       try {
         const { NL2SpelEngine } = await import('@agentix-e/nl2spel');
-        const { OpenAICompatibleProvider, PROVIDER_PRESETS } = await import('@agentix-e/nl2spel-openai');
+        const { OpenAICompatibleProvider, PROVIDER_PRESETS } =
+          await import('@agentix-e/nl2spel-openai');
 
         const engine = new NL2SpelEngine();
         const provider = new OpenAICompatibleProvider({
@@ -240,11 +267,15 @@ test.describe('NL integration', () => {
         const genResult = await engine.generate('amount greater than 1000', {
           contextSchema: {
             root: {
-              name: 'order', type: 'Order',
+              name: 'order',
+              type: 'Order',
               fields: { amount: { type: 'number' } },
               methods: {},
             },
-            variables: {}, beans: {}, types: {}, functions: {},
+            variables: {},
+            beans: {},
+            types: {},
+            functions: {},
           },
         });
 
