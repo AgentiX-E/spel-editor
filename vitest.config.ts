@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
+    exclude: ['tests/**/*.browser*.test.ts', 'tests/**/browser-integration.test.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
