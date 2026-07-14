@@ -105,7 +105,8 @@ describe('nl2spel integration (real DeepSeek)', () => {
   );
 
   it('offline-only mode generates SpEL without LLM', async () => {
-    const engine = new NL2SpelEngine();
+    const { NL2SpelEngine: Engine } = await import('@agentix-e/nl2spel');
+    const engine = new Engine();
     const result = await engine.generate('amount greater than 500', { offlineOnly: true });
     expect(result.expression).toBeTruthy();
     expect(['pattern', 'template']).toContain(result.strategy);
