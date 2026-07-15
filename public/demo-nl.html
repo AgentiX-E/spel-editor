@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpEL Editor — NL Integration Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f8fafc; color: #1e293b; }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p.desc { color: #64748b; margin-bottom: 24px; }
+    .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .section h2 { font-size: 1rem; margin-bottom: 12px; color: #334155; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .input-row input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+    .input-row button { padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+    .input-row button:hover { background: #1d4ed8; }
+    .input-row button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tag { padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 12px; cursor: pointer; background: #f1f5f9; }
+    .tag:hover { background: #e2e8f0; }
+    .info { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+    .result { margin-top: 12px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-family: monospace; font-size: 13px; display: none; }
+    .result.show { display: block; }
+    spel-editor { display: block; }
+  </style>
+</head>
+<body>
+  <h1>SpEL Editor — NL Integration Demo</h1>
+  <p class="desc">Type natural language below, and the editor will generate a SpEL expression using nl2spel pattern matching or DeepSeek LLM.</p>
+
+  <div class="section">
+    <h2>SpEL Editor</h2>
+    <spel-editor id="editor" min-height="80px" placeholder="#order.amount > 1000"></spel-editor>
+  </div>
+
+  <div class="section">
+    <h2>Natural Language → SpEL</h2>
+    <div class="tags">
+      <span class="tag" data-nl="amount greater than 500">amount > 500</span>
+      <span class="tag" data-nl="status is active and amount greater than 1000">status + amount</span>
+      <span class="tag" data-nl="user has admin role">has role</span>
+      <span class="tag" data-nl="name is not null and name is not empty">not null/empty</span>
+      <span class="tag" data-nl="price between 10 and 100">between</span>
+      <span class="tag" data-nl="items contains apple">contains</span>
+    </div>
+    <div class="input-row">
+      <input type="text" id="nlInput" placeholder="e.g. amount greater than 500" />
+      <button id="generateBtn">Generate SpEL</button>
+    </div>
+    <div class="result" id="result"></div>
+    <div class="info" id="info"></div>
+  </div>
+
+  <script type="module">
+    import '@agentix-e/spel-editor';
+    import { NL2SpelEngine } from '@agentix-e/nl2spel';
+
+    const editor = document.querySelector('#editor');
+    const nlInput = document.querySelector('#nlInput');
+    const generateBtn = document.querySelector('#generateBtn');
+    const result = document.querySelector('#result');
+    const info = document.querySelector('#info');
+
+    const engine = new NL2SpelEngine();
+
+    async function generate(nl) {
+      info.textContent = 'Generating...';
+      result.classList.remove('show');
+      try {
+        const res = await engine.generate(nl);
+        if (res.expression) {
+          editor.setValue(res.expression);
+          result.textContent = `✅ ${res.expression}  (strategy: ${res.strategy})`;
+          result.classList.add('show');
+          info.textContent = '';
+        }
+      } catch (e) {
+        info.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    generateBtn.addEventListener('click', () => {
+      const nl = nlInput.value.trim();
+      if (nl) generate(nl);
+    });
+
+    nlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const nl = nlInput.value.trim();
+        if (nl) generate(nl);
+      }
+    });
+
+    document.querySelectorAll('.tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        const nl = tag.dataset.nl;
+        nlInput.value = nl;
+        generate(nl);
+      });
+    });
+  </script>
+</body>
+</html>

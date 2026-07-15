@@ -85,6 +85,145 @@ npm install @agentix-e/spel-editor
 | `--spel-border-color` | `#d0d5dd` | Editor border color |
 | `--spel-border-radius` | `6px` | Editor border radius |
 
+## NL Integration — Natural Language → SpEL
+
+`@agentix-e/spel-editor` accepts `@agentix-e/nl2spel` as an **optional peer dependency**.
+You can wire nl2spel into the editor to translate natural language input into valid SpEL expressions.
+
+### Pattern Matching (Zero Dependencies, No API Key)
+
+nl2spel ships with 63 built-in patterns that cover common SpEL constructs without any LLM call:
+
+```html
+<spel-editor id="editor" min-height="100px"></spel-editor>
+
+<script type="module">
+  import '@agentix-e/spel-editor';
+  import { NL2SpelEngine } from '@agentix-e/nl2spel';
+
+  const editor = document.querySelector('#editor');
+  const engine = new NL2SpelEngine();
+
+  async function generateSpEL(naturalLanguage) {
+    const result = await engine.generate(naturalLanguage, { offlineOnly: true });
+    if (result.expression) {
+      editor.setValue(result.expression);
+    }
+  }
+
+  // Usage:
+  await generateSpEL('amount greater than 500');
+  // Editor now shows: #amount > 500
+</script>
+```
+
+### LLM-Powered: DeepSeek / OpenAI-Compatible
+
+```bash
+npm install @agentix-e/nl2spel-openai
+```
+
+```html
+<spel-editor id="editor" min-height="100px"></spel-editor>
+
+<script type="module">
+  import '@agentix-e/spel-editor';
+  import { NL2SpelEngine } from '@agentix-e/nl2spel';
+  import { OpenAICompatibleProvider } from '@agentix-e/nl2spel-openai';
+
+  const editor = document.querySelector('#editor');
+  const engine = new NL2SpelEngine();
+
+  // Register DeepSeek as the LLM provider
+  engine.registerProvider(
+    new OpenAICompatibleProvider({
+      provider: 'deepseek',
+      apiKey: 'sk-your-deepseek-key-here',
+    })
+  );
+
+  async function generateSpEL(naturalLanguage, contextSchema) {
+    const result = await engine.generate(naturalLanguage, { contextSchema });
+    if (result.expression) {
+      editor.setValue(result.expression);
+    }
+  }
+
+  // With context schema for smarter completions:
+  const schema = {
+    root: {
+      name: 'order',
+      type: 'Order',
+      fields: {
+        amount: { type: 'number', description: 'Order amount' },
+        status: { type: 'string', description: 'Order status' },
+      },
+      methods: {},
+    },
+    variables: {},
+    beans: {},
+    types: {},
+    functions: {},
+  };
+
+  // Wire the schema for context-aware diagnostics
+  editor.contextSchema = schema;
+
+  // Generate SpEL with full context
+  await generateSpEL('orders where amount exceeds one thousand and status is active', schema);
+  // Editor shows: #order.amount > 1000 and #order.status == 'active'
+</script>
+```
+
+### Browser-Local LLM: WebLLM (Gemma)
+
+```bash
+npm install @agentix-e/nl2spel-webllm @mlc-ai/web-llm
+```
+
+```html
+<spel-editor id="editor" min-height="100px"></spel-editor>
+
+<script type="module">
+  import '@agentix-e/spel-editor';
+  import { NL2SpelEngine } from '@agentix-e/nl2spel';
+  import { WebLLMProvider } from '@agentix-e/nl2spel-webllm';
+
+  const editor = document.querySelector('#editor');
+  const engine = new NL2SpelEngine();
+
+  const provider = new WebLLMProvider({
+    modelId: 'gemma-2-2b-it',          // 2B parameter model
+    maxTokens: 256,
+    temperature: 0.1,
+    debug: false,                       // Set true to see model logs
+  });
+
+  await provider.initialize();
+  engine.registerProvider(provider);
+
+  async function generateSpEL(naturalLanguage) {
+    const result = await engine.generate(naturalLanguage);
+    if (result.expression) {
+      editor.setValue(result.expression);
+    }
+  }
+
+  // First call loads the model (~1.5 GB download, cached in IndexedDB)
+  await generateSpEL('amount greater than 500');
+  // Subsequent calls are fast — model stays in memory
+  await generateSpEL('status is not null and not empty');
+</script>
+```
+
+### Integration Pattern Summary
+
+| Mode | Package | API Key | Data Leaves Browser | Setup |
+|------|---------|---------|-------------------|-------|
+| **Pattern matching** | `@agentix-e/nl2spel` | ❌ None | ❌ No | `npm install` |
+| **DeepSeek / OpenAI** | `+ nl2spel-openai` | ✅ Required | ✅ Yes | `npm install` + API key |
+| **Browser-local LLM** | `+ nl2spel-webllm` | ❌ None | ❌ No | 1.5 GB model download |
+
 ## License
 
 MIT © AgentiX-E
