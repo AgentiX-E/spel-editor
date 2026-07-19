@@ -1,7 +1,7 @@
 # @agentix-e/spel-editor
 
 > Web-embeddable Spring Expression Language (SpEL) editor.
-> Based on CodeMirror 6 + spel-ts v1.1.0. Framework-agnostic Web Component.
+> Based on CodeMirror 6 + spel-ts v1.2.2. Framework-agnostic Web Component.
 
 [![CI](https://github.com/AgentiX-E/spel-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/spel-editor/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@agentix-e/spel-editor?color=blue)](https://www.npmjs.com/package/@agentix-e/spel-editor)

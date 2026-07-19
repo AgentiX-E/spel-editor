@@ -2,7 +2,7 @@
  * @agentix-e/spel-editor — Public API
  *
  * Web-embeddable Spring Expression Language (SpEL) editor.
- * Based on CodeMirror 6 with spel-ts v1.1.0 language services.
+ * Based on CodeMirror 6 with spel-ts v1.2.2 language services.
  */
 export { SpelEditor } from './spel-editor.js';
 export type { SpelEditorDetail } from './types.js';
