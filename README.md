@@ -5,6 +5,17 @@
 
 [![GitHub](https://img.shields.io/npm/v/@agentix-e/spel-editor)](https://www.npmjs.com/package/@agentix-e/spel-editor)
 
+## What is @agentix-e/spel-editor?
+
+`@agentix-e/spel-editor` is a **drop-in Web Component** that adds a full-featured SpEL expression editor to any web application. Built on CodeMirror 6 and powered by `@agentix-e/spel-ts` for real-time syntax validation, it provides syntax highlighting, auto-completion, diagnostics, and hover tooltips — with zero framework lock-in. Optionally integrates with `@agentix-e/nl2spel` for natural-language-to-SpEL generation.
+
+### When should I use it?
+
+- You're building a **rules engine UI** that users edit SpEL expressions in
+- You need a **code editor for expression languages** (not general-purpose code)
+- You want **natural language input** converted to valid SpEL (via optional NL2SpEL integration)
+- You need a **framework-agnostic** component that works with React, Vue, Angular, Svelte, or plain HTML
+
 ## Quick Start
 
 ```bash
@@ -223,6 +234,20 @@ npm install @agentix-e/nl2spel-webllm @mlc-ai/web-llm
 | **Pattern matching** | `@agentix-e/nl2spel` | ❌ None | ❌ No | `npm install` |
 | **DeepSeek / OpenAI** | `+ nl2spel-openai` | ✅ Required | ✅ Yes | `npm install` + API key |
 | **Browser-local LLM** | `+ nl2spel-webllm` | ❌ None | ❌ No | 1.5 GB model download |
+
+## FAQ
+
+### Which frameworks does it support?
+All of them. `@agentix-e/spel-editor` is a native Web Component (`<spel-editor>`) that works with React, Vue, Angular, Svelte, or plain HTML with no framework-specific wrappers needed.
+
+### Do I need to install spel-ts separately?
+No. `@agentix-e/spel-ts` is a direct dependency and is bundled automatically. NL2SpEL integration is an optional peer dependency — install it only if you need natural language → SpEL generation.
+
+### Can I customize the appearance?
+Yes. 12 CSS custom properties (`--spel-bg`, `--spel-font-family`, `--spel-border-color`, etc.) give you complete visual control without forking or CSS hacks.
+
+### How does the NL integration work?
+Three modes: **Pattern matching** (offline, zero deps), **LLM API** (DeepSeek/OpenAI, requires API key), and **browser-local LLM** (WebGPU + Gemma, ~1.5 GB model download). Choose based on your latency, privacy, and cost requirements.
 
 ## License
 
