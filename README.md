@@ -3,7 +3,13 @@
 > Web-embeddable Spring Expression Language (SpEL) editor.
 > Based on CodeMirror 6 + spel-ts v1.1.0. Framework-agnostic Web Component.
 
-[![GitHub](https://img.shields.io/npm/v/@agentix-e/spel-editor)](https://www.npmjs.com/package/@agentix-e/spel-editor)
+[![CI](https://github.com/AgentiX-E/spel-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/AgentiX-E/spel-editor/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@agentix-e/spel-editor?color=blue)](https://www.npmjs.com/package/@agentix-e/spel-editor)
+[![Docs](https://img.shields.io/badge/docs-TypeDoc-blue)](https://AgentiX-E.github.io/spel-editor/api/)
+[![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://AgentiX-E.github.io/spel-editor/coverage/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-green)](https://nodejs.org/)
 
 ## What is @agentix-e/spel-editor?
 
@@ -49,6 +55,8 @@ npm install @agentix-e/spel-editor
 - **Framework agnostic** — Works with React, Vue, Angular, Svelte, or plain HTML
 
 ## API Reference
+
+> 📚 Full TypeDoc API documentation: [AgentiX-E.github.io/spel-editor/api/](https://AgentiX-E.github.io/spel-editor/api/)
 
 ### Properties (Attributes)
 

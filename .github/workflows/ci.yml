@@ -53,3 +53,99 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run browser tests
         run: pnpm test:browser
+
+  # ════════════════════════════════════════════════
+  # GitHub Pages Deployment (push to master only)
+  # ════════════════════════════════════════════════
+  pages:
+    name: Deploy GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [quality, browser-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Generate TypeDoc API docs
+        run: npx typedoc
+
+      - name: Run tests with coverage
+        run: pnpm test
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+      - name: Prepare pages
+        run: |
+          mkdir -p public/api public/coverage
+          cp -r docs/api/* public/api/ 2>/dev/null || true
+          cp -r coverage/* public/coverage/ 2>/dev/null || true
+          cat > public/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>@agentix-e/spel-editor — Web-embeddable SpEL Editor</title>
+          <meta name="description" content="Web-embeddable Spring Expression Language (SpEL) editor — CodeMirror 6 + spel-ts powered, framework-agnostic Web Component with NL2SpEL integration. TypeDoc API docs and coverage reports.">
+          <meta name="keywords" content="SpEL, spel-editor, code editor, expression editor, CodeMirror 6, Web Component, spel-ts, nl2spel, TypeScript, syntax highlighting, autocomplete">
+          <meta property="og:title" content="@agentix-e/spel-editor — Web-embeddable SpEL Editor">
+          <meta property="og:description" content="Drop-in Web Component for editing Spring Expression Language — CodeMirror 6 + spel-ts powered. Syntax highlighting, auto-completion, real-time diagnostics.">
+          <meta property="og:type" content="website">
+          <meta property="og:url" content="https://AgentiX-E.github.io/spel-editor/">
+          <meta property="og:site_name" content="AgentiX-E">
+          <meta name="twitter:card" content="summary_large_image">
+          <meta name="twitter:title" content="@agentix-e/spel-editor — Web-embeddable SpEL Editor">
+          <meta name="twitter:description" content="Drop-in Web Component for editing Spring Expression Language. Syntax highlighting, auto-completion, real-time diagnostics.">
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareSourceCode",
+            "name": "@agentix-e/spel-editor",
+            "description": "Web-embeddable Spring Expression Language (SpEL) editor — CodeMirror 6 + spel-ts powered",
+            "programmingLanguage": "TypeScript",
+            "license": "https://opensource.org/licenses/MIT",
+            "codeRepository": "https://github.com/AgentiX-E/spel-editor",
+            "author": { "@type": "Organization", "name": "AgentiX-E", "url": "https://github.com/AgentiX-E" }
+          }
+          </script>
+          <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:800px;margin:48px auto;padding:0 24px;line-height:1.6;background:#0d1117;color:#c9d1d9}h1{font-size:2rem;border-bottom:2px solid #30363d;padding-bottom:12px}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;margin:16px 0}.card h2{margin:0 0 8px;font-size:1.25rem}.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;background:#238636;color:#fff}</style>
+          </head><body>
+          <h1>@agentix-e/spel-editor</h1>
+          <p>Web-embeddable Spring Expression Language (SpEL) editor — CodeMirror 6 + spel-ts powered, framework-agnostic Web Component with NL2SpEL integration.</p>
+          <div class="card"><h2><a href="./api/">API Reference</a> <span class="badge">TypeDoc</span></h2><p>Complete API documentation generated from source code.</p></div>
+          <div class="card"><h2><a href="./coverage/">Coverage Report</a> <span class="badge">Istanbul</span></h2><p>Test coverage report with per-file line and branch details.</p></div>
+          <p style="margin-top:32px"><a href="https://github.com/AgentiX-E/spel-editor">GitHub Repository</a> · <a href="https://www.npmjs.com/package/@agentix-e/spel-editor">npm Package</a></p>
+          </body></html>
+          HTML
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
