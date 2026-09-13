@@ -28,6 +28,7 @@ export function tokenKindToStyle(kind: TokenKind): string {
     case TokenKind.MATCHES:
     case TokenKind.BETWEEN:
     case TokenKind.INSTANCEOF:
+    case TokenKind.DIV:
     case TokenKind.MOD:
     case TokenKind.NEW:
       return 'keyword';
@@ -109,6 +110,39 @@ interface SpelSpan {
   readonly style: string;
 }
 
+/** One token as the engine's tokenizer reports it. */
+type SpelToken = ReturnType<SpelTokenizer['tokenize']>[number];
+
+/**
+ * Words the engine resolves in its parser rather than its tokenizer.
+ *
+ * spel-ts 2.0.0 stopped classifying these in the lexer. `true`, `false` and `null`
+ * used to arrive as `LITERAL_BOOLEAN` and `LITERAL_NULL`, and `and`, `or`, `matches`,
+ * `between`, `instanceof` and `new` as token kinds of their own. All nine are now
+ * `IDENTIFIER`, because SpEL resolves them with `equalsIgnoreCase` — which is what
+ * lets a field be called `and` and `'abc'.matches('a.*')` still parse.
+ *
+ * Highlighting is lexical, so the style each word used to be given is restored here
+ * from its text rather than from a token kind that no longer exists. The lookup is
+ * case-insensitive for the same reason the engine's is: `TRUE` is the same literal
+ * as `true`.
+ *
+ * `not`, `div`, `mod`, `eq`, `ne`, `lt`, `le`, `gt` and `ge` are deliberately absent:
+ * the tokenizer still reports a token kind for those, so `tokenKindToStyle` covers
+ * them and a word listed here as well would be a second source of truth.
+ */
+const PARSER_RESOLVED_WORDS: ReadonlyMap<string, string> = new Map([
+  ['true', 'bool'],
+  ['false', 'bool'],
+  ['null', 'keyword'],
+  ['and', 'operator'],
+  ['or', 'operator'],
+  ['matches', 'keyword'],
+  ['between', 'keyword'],
+  ['instanceof', 'keyword'],
+  ['new', 'keyword'],
+]);
+
 /**
  * Per-document parser state.
  *
@@ -153,7 +187,7 @@ function spansFor(line: string): SpelSpan[] {
   for (let index = 0; index < tokens.length; index++) {
     const token = tokens[index]!;
     if (token.kind === TokenKind.EOF) break;
-    const style = styleForToken(tokens, index);
+    const style = styleForToken(line, tokens, index);
     if (style === '') continue;
     spans.push({ from: token.startPos, to: token.endPos, style });
   }
@@ -161,10 +195,12 @@ function spansFor(line: string): SpelSpan[] {
 }
 
 /**
- * The style for the token at `index`, which for an identifier depends on what
- * precedes it: `#name` is a variable and `.name` is a property.
+ * The style for the token at `index`, which for an identifier depends on the text and
+ * on what precedes it: `#name` is a variable, `.name` is a property, and a word the
+ * parser resolves — `true`, `and`, `null` — is whatever it meant before the engine
+ * moved that decision out of the lexer.
  */
-function styleForToken(tokens: readonly { kind: TokenKind }[], index: number): string {
+function styleForToken(line: string, tokens: readonly SpelToken[], index: number): string {
   const token = tokens[index]!;
   if (token.kind === TokenKind.IDENTIFIER) {
     const previous = index > 0 ? tokens[index - 1] : undefined;
@@ -172,6 +208,8 @@ function styleForToken(tokens: readonly { kind: TokenKind }[], index: number): s
     if (previous?.kind === TokenKind.DOT || previous?.kind === TokenKind.SAFE_NAV) {
       return 'propertyName';
     }
+    const word = line.slice(token.startPos, token.endPos).toLowerCase();
+    return PARSER_RESOLVED_WORDS.get(word) ?? 'variableName';
   }
   return tokenKindToStyle(token.kind);
 }

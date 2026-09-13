@@ -142,6 +142,73 @@ describe('language instances are independent', () => {
   });
 });
 
+/**
+ * Words the engine resolves in its parser rather than its tokenizer.
+ *
+ * spel-ts 2.0.0 stopped classifying nine words in the lexer, so the token stream no
+ * longer says what they are and the grammar has to decide from the text. Both
+ * directions are pinned here: the negative cases matter as much as the positive ones,
+ * because the engine also accepts these words as names.
+ */
+describe('words the parser resolves', () => {
+  it('styles the literals the tokenizer no longer classifies', () => {
+    const parser = createTokenParser();
+
+    expect(stylesFor(parser, 'true')).toEqual(['bool']);
+    expect(stylesFor(parser, 'false')).toEqual(['bool']);
+    expect(stylesFor(parser, 'null')).toEqual(['keyword']);
+  });
+
+  it('is case-insensitive, as the engine is', () => {
+    const parser = createTokenParser();
+
+    expect(stylesFor(parser, 'TRUE')).toEqual(['bool']);
+    expect(stylesFor(parser, 'Null')).toEqual(['keyword']);
+  });
+
+  it('styles the connectives the tokenizer no longer classifies', () => {
+    const parser = createTokenParser();
+
+    expect(stylesFor(parser, 'true and false')).toEqual(['bool', 'operator', 'bool']);
+    expect(stylesFor(parser, 'a or b')).toEqual(['variableName', 'operator', 'variableName']);
+    expect(stylesFor(parser, 'x matches y')).toEqual(['variableName', 'keyword', 'variableName']);
+    expect(stylesFor(parser, 'x between y')).toEqual(['variableName', 'keyword', 'variableName']);
+    expect(stylesFor(parser, 'x instanceof y')).toEqual([
+      'variableName',
+      'keyword',
+      'variableName',
+    ]);
+    expect(stylesFor(parser, 'new T()')).toEqual([
+      'keyword',
+      'variableName',
+      'punctuation',
+      'punctuation',
+    ]);
+  });
+
+  it('leaves those words alone when they are used as names', () => {
+    const parser = createTokenParser();
+
+    // `#and` is a variable and `obj.and` is a property. The engine accepts both,
+    // because it compares with `equalsIgnoreCase` instead of reserving the words, so
+    // colouring every occurrence as an operator would be the opposite mistake.
+    expect(stylesFor(parser, '#and')).toEqual(['typeName', 'variableName']);
+    expect(stylesFor(parser, 'obj.and')).toEqual(['variableName', 'punctuation', 'propertyName']);
+  });
+
+  it('still styles the operators the tokenizer does classify', () => {
+    const parser = createTokenParser();
+
+    // `not`, `div`, `mod`, `eq`, `ne`, `lt`, `le`, `gt` and `ge` keep token kinds of
+    // their own. A word listed in the text lookup as well would be a second source of
+    // truth for the same decision.
+    expect(stylesFor(parser, 'not true')).toEqual(['operator', 'bool']);
+    expect(stylesFor(parser, 'a div b')).toEqual(['variableName', 'keyword', 'variableName']);
+    expect(stylesFor(parser, 'a mod b')).toEqual(['variableName', 'keyword', 'variableName']);
+    expect(stylesFor(parser, 'a eq b')).toEqual(['variableName', 'operator', 'variableName']);
+  });
+});
+
 describe('style table covers the engine vocabulary', () => {
   it('maps every TokenKind except EOF to a non-empty style', () => {
     const kinds = Object.values(TokenKind).filter(

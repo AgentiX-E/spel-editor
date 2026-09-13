@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] — 2026-09-13
 ### Added
 - `docs/integration.md` — embedding, theming, accessibility, and how to call a provider
   without shipping its key to the browser.
@@ -13,11 +13,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replaced from CSS.
 
 ### Changed
+- **`@agentix-e/spel-ts` moves to `^2.0.0`.** This package uses spel-ts at runtime — the
+  tokenizer and `TokenKind` for the grammar, the parser behind lint and hover, and the
+  completion, formatter and diagnostic engines — so the major bump is a real dependency
+  change rather than a formality. `TokenKind`'s ordinals are renumbered in 2.0.0 and an
+  unsuffixed integer literal above `int` range is no longer accepted. The grammar refers
+  to members by name and no literal above `int` range appears anywhere in this package's
+  sources or tests, so neither change should reach its behaviour — and the suite, not
+  that reasoning, is what establishes it.
 - `typecheck` now also checks the tests, which `tsconfig.json` had excluded by including
   `src` alone. Fifty-two errors surfaced, all of them real, and are fixed.
 - Coverage thresholds raised to 95 on all four dimensions, from 85/80/85/85.
 
 ### Fixed
+- **`true`, `false`, `null`, `and`, `or`, `matches`, `between`, `instanceof` and `new`
+  were painted as ordinary variables.** spel-ts 2.0.0 moved those words out of its
+  tokenizer — it resolves them in the parser, with `equalsIgnoreCase`, which is also
+  what lets a field be called `and` — so all nine now arrive as `IDENTIFIER` instead of
+  token kinds of their own. The grammar decides them from the text, and only when they
+  are not names: `#and` is still a variable and `obj.and` still a property.
+- **`div` was painted as nothing.** spel-ts 2.0.0 gives the textual division operator a
+  token kind of its own and the style table had no case for it, so `a div b` left it
+  unstyled. `a mod b` was already covered; the two now behave alike.
 - **Syntax highlighting did nothing.** `spelLanguage()` wrapped the stream parser in a
   `LanguageSupport` without a highlight style, and `LanguageSupport` installs none of its
   own, so every token was tagged and none was coloured. The style is now part of the
