@@ -1,6 +1,6 @@
 {
   "name": "@agentix-e/spel-editor",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "Web-embeddable Spring Expression Language (SpEL) editor — CodeMirror 6 + spel-ts powered, framework-agnostic Web Component with NL2SpEL integration",
   "type": "module",
   "main": "./dist/index.js",
@@ -34,7 +34,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@agentix-e/spel-ts": "^1.2.2",
+    "@agentix-e/spel-ts": "^2.0.0",
     "@codemirror/autocomplete": "^6.0.0",
     "@codemirror/commands": "^6.0.0",
     "@codemirror/language": "^6.0.0",
