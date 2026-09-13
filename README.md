@@ -47,11 +47,12 @@ npm install @agentix-e/spel-editor
 
 ## Features
 
-- **Syntax highlighting** — Accurate token-level coloring powered by spel-ts Tokenizer
-- **Auto-completion** — Keyword, operator, variable, and context-aware suggestions
+- **Syntax highlighting** — Token-level colouring powered by the spel-ts Tokenizer, with every token class themable through a CSS custom property
+- **Auto-completion** — Keyword, operator, variable, and context-aware suggestions, inserted as CodeMirror snippets with tab-through fields
 - **Real-time diagnostics** — Syntax, semantic, and context validation
 - **Hover tooltips** — Node type information on hover
-- **Non-invasive theming** — 12 CSS custom properties for complete visual control
+- **Non-invasive theming** — 22 CSS custom properties for complete visual control
+- **Declarative-friendly** — Assigning `value` (property or attribute) updates the visible document
 - **Framework agnostic** — Works with React, Vue, Angular, Svelte, or plain HTML
 
 ## API Reference
@@ -99,10 +100,26 @@ npm install @agentix-e/spel-editor
 | `--spel-line-highlight` | `#f3f4f6` | Active line highlight color |
 | `--spel-selection-bg` | `#bfdbfe` | Selection background color |
 | `--spel-gutter-bg` | `#f9fafb` | Gutter background |
-| `--spel-gutter-fg` | `#9ca3af` | Gutter foreground (line numbers) |
+| `--spel-gutter-fg` | `#5b6472` | Gutter foreground (line numbers). 5.72:1 on the gutter background |
 | `--spel-border-width` | `1px` | Editor border width |
 | `--spel-border-color` | `#d0d5dd` | Editor border color |
 | `--spel-border-radius` | `6px` | Editor border radius |
+
+Every colour a token can be painted in is a custom property too, so the palette can be
+replaced without a rebuild:
+
+| Property | Default | Token |
+|----------|---------|-------|
+| `--spel-token-keyword` | `#7c3aed` | `null`, `true`, `matches`, `between`, `instanceof` |
+| `--spel-token-bool` | `#b45309` | Boolean literals |
+| `--spel-token-number` | `#0f766e` | Integer, long, real and hex literals |
+| `--spel-token-string` | `#15803d` | String literals |
+| `--spel-token-variable` | `#1d4ed8` | `#variable` |
+| `--spel-token-property` | `#0369a1` | `.property` and `?.property` |
+| `--spel-token-operator` | `#475569` | Arithmetic, comparison and logical operators |
+| `--spel-token-type` | `#9333ea` | `@bean`, `&@factory`, `T` |
+| `--spel-token-punctuation` | `#64748b` | Brackets, commas, dots |
+| `--spel-token-operator-keyword` | `#7c3aed` | Selection and projection (`.?[ ]`, `.![ ]`, `.^[ ]`, `.*[ ]`) |
 
 ## NL Integration — Natural Language → SpEL
 
@@ -153,11 +170,17 @@ npm install @agentix-e/nl2spel-openai
   const editor = document.querySelector('#editor');
   const engine = new NL2SpelEngine();
 
-  // Register DeepSeek as the LLM provider
+  // Route provider calls through your own server, which holds the API key.
+  // A key placed here would be compiled into a public bundle — see
+  // docs/integration.md §5 for the proxy contract and the browser-local alternative.
   engine.registerProvider(
     new OpenAICompatibleProvider({
-      provider: 'deepseek',
-      apiKey: 'sk-your-deepseek-key-here',
+      custom: {
+        name: 'spel-proxy',
+        baseURL: '/api/spel-llm',
+        apiKey: 'not-a-secret',
+        model: 'deepseek-chat',
+      },
     })
   );
 
