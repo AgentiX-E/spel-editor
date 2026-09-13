@@ -11,7 +11,17 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SpelExpressionParser } from '@agentix-e/spel-ts';
 
-const API_KEY = process.env.DEEPSEEK_API_KEY ?? '';
+/**
+ * The API key, read through a locally typed view of Node's `process`.
+ *
+ * `@types/node` is not a dependency of this package — it appears in the lockfile only
+ * as an optional peer — so the global is declared here rather than pulled in. Adding
+ * the package would desynchronise `pnpm-lock.yaml`, which CI installs with
+ * `--frozen-lockfile`.
+ */
+const nodeProcess = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+  .process;
+const API_KEY = nodeProcess?.env?.['DEEPSEEK_API_KEY'] ?? '';
 const hasAPIKey = !!API_KEY;
 
 function isValidSpEL(expression: string): boolean {
