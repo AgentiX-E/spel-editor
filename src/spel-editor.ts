@@ -50,7 +50,10 @@ const EDITOR_STYLES = css`
   }
   .cm-editor .cm-gutters {
     background: var(--spel-gutter-bg, #f9fafb);
-    color: var(--spel-gutter-fg, #9ca3af);
+    /* 5.72:1 on the gutter background. The previous #9ca3af measured 2.43:1, under
+       the 4.5:1 WCAG AA requires for text, which made line numbers and lint markers
+       unreadable at reduced contrast sensitivity. */
+    color: var(--spel-gutter-fg, #5b6472);
     border: none;
   }
 `;
@@ -91,11 +94,6 @@ export class SpelEditor extends LitElement {
     return html`
       <div
         class="cm-container"
-        role="textbox"
-        aria-label=${this.placeholder}
-        aria-readonly=${this.readonly ? 'true' : 'false'}
-        aria-disabled=${this.disabled ? 'true' : 'false'}
-        tabindex="0"
         style="
           min-height: ${this.minHeight};
           border: var(--spel-border-width, 1px) solid var(--spel-border-color, #d0d5dd);
@@ -111,12 +109,19 @@ export class SpelEditor extends LitElement {
   }
 
   override updated(changed: PropertyValues) {
-    if (changed.has('disabled') || changed.has('readonly')) {
+    if (changed.has('disabled') || changed.has('readonly') || changed.has('placeholder')) {
+      // All three are baked into the extension list, so a change has to rebuild the
+      // editor rather than mutate it.
       this.#updateEditorState();
     }
     // Re-create editor if it was destroyed (e.g. after re-attach to DOM)
     if (!this.#editorView && this.containerEl) {
       this.#createEditor();
+    }
+    // Reflect a value that was assigned rather than typed, so a declarative binding
+    // (`el.value = …`, or the `value` attribute) reaches the visible document.
+    if (changed.has('value')) {
+      this.#reflectValue();
     }
     // Re-run diagnostics when context schema changes
     if (changed.has('contextSchema')) {
@@ -217,6 +222,32 @@ export class SpelEditor extends LitElement {
   }
 
   /**
+   * Push the current `value` into the editor, if the two have diverged.
+   *
+   * Typing sets `value` from the document, so this is a no-op for the common case and
+   * only acts on a value assigned from outside — which is how every declarative
+   * consumer sets it. Without this, `el.value = 'a > 1'` updated the element's state
+   * while the visible document kept showing the previous expression.
+   *
+   * The guard is what keeps it from looping: the change listener writes the document
+   * text back into `value`, and a dispatch here is skipped whenever they already
+   * agree, so the cursor is never reset mid-edit.
+   */
+  #reflectValue(): void {
+    const view = this.#editorView;
+    if (!view) return;
+
+    const current = view.state.sliceDoc();
+    if (current === this.value) return;
+
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: this.value },
+      selection: { anchor: this.value.length },
+    });
+    this.#scheduleDiagnostics();
+  }
+
+  /**
    * Schedule a debounced diagnostic run (300ms).
    * Avoids redundant computation on rapid typing.
    */
@@ -251,6 +282,22 @@ export class SpelEditor extends LitElement {
     );
   }
 
+  /**
+   * Attributes for the editable region.
+   *
+   * CodeMirror already renders `.cm-content` with `role="textbox"`,
+   * `aria-multiline="true"` and — when the state is read-only — `aria-readonly`, so
+   * that element is the component's one textbox. The label and the disabled state
+   * belong on it as well: declaring them on the wrapper as well produced two nested
+   * textboxes and two tab stops for a single editable region.
+   */
+  #contentAttributes(): Record<string, string> {
+    return {
+      'aria-label': this.placeholder,
+      ...(this.disabled ? { 'aria-disabled': 'true' } : {}),
+    };
+  }
+
   #createEditor() {
     const extensions: Extension[] = [
       spelLanguage(),
@@ -261,6 +308,7 @@ export class SpelEditor extends LitElement {
       closeBrackets(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       cmPlaceholder(this.placeholder),
+      EditorView.contentAttributes.of(this.#contentAttributes()),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           this.value = update.state.sliceDoc();

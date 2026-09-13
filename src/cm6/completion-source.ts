@@ -1,5 +1,26 @@
-import { type CompletionSource, type CompletionContext } from '@codemirror/autocomplete';
+import {
+  snippetCompletion,
+  type Completion,
+  type CompletionSource,
+  type CompletionContext,
+} from '@codemirror/autocomplete';
 import { SpelCompletionEngine, type CompletionItem, type ContextSchema } from '@agentix-e/spel-ts';
+
+import { toCm6Snippet } from './snippet.js';
+
+/**
+ * The characters a SpEL name may contain, and therefore the characters that keep the
+ * completion list valid.
+ *
+ * `\w` is not enough for either role. An identifier may be any Unicode letter — the
+ * engine accepts them so the natural-language pipeline can emit a field named in
+ * Chinese — and a reference is written `#order.amount`, so `#`, `@` and `.` belong to
+ * the token as well. Matching only `\w` made the list replace the ASCII tail of
+ * `#order.amo` instead of the whole reference, and left `validFor` with no way to
+ * notice that a space ends the token.
+ */
+const NAME_PREFIX = /[\p{L}\p{N}_$#@.]*$/u;
+const NAME_VALID_FOR = /^[\p{L}\p{N}_$#@.]*$/u;
 
 /**
  * Adapter: spel-ts CompletionEngine → CM6 CompletionSource.
@@ -16,31 +37,37 @@ export function spelCompletion(getContextSchema?: () => ContextSchema | null): C
 
     const items = SpelCompletionEngine.getCompletions(expression, position, schema);
 
-    const validFor = /\w*/;
-
     return {
-      from: context.matchBefore(validFor)?.from ?? position,
+      // `matchBefore` answers null when the pattern does not match at the cursor, so the
+      // fallback stays even though NAME_PREFIX, which may match empty, always matches
+      // today. It guards CodeMirror's contract rather than a case this adapter can reach,
+      // and a future narrowing of the pattern would make it live.
+      from: context.matchBefore(NAME_PREFIX)?.from ?? position,
       options: items.map((item) => mapToCM6Completion(item)),
-      // Allow completions at any position
-      validFor: () => true,
+      // Stated rather than omitted, so the list stays open only while the cursor is
+      // still inside a name. `() => true` claimed every position continues a token,
+      // including the space that ends one.
+      validFor: NAME_VALID_FOR,
     };
   };
 }
 
-/** Map spel-ts CompletionItem to CM6 Completion */
-function mapToCM6Completion(item: CompletionItem) {
-  // Map CompletionKind to CM6 type
-  const type = mapKindToCM6Type(item.kind);
-
-  return {
+/**
+ * Map a spel-ts CompletionItem to a CM6 Completion.
+ *
+ * The engine describes what to insert as a snippet template, so the completion is
+ * built with `snippetCompletion`: a plain string `apply` would insert the template
+ * verbatim, placeholders and all, typing `T($1)` for the `T(...)` item.
+ */
+function mapToCM6Completion(item: CompletionItem): Completion {
+  return snippetCompletion(toCm6Snippet(item.insertText), {
     label: item.label,
-    type,
+    type: mapKindToCM6Type(item.kind),
     detail: item.detail,
     info: item.documentation,
-    apply: item.insertText,
     // Higher priority items appear first
     boost: item.sortPriority / 100,
-  };
+  });
 }
 
 function mapKindToCM6Type(kind: string): string {

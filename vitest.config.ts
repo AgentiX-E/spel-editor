@@ -5,6 +5,10 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
     exclude: ['tests/**/*.browser*.test.ts', 'tests/**/browser-integration.test.ts'],
+    // Fills in the two Range measurement methods CodeMirror needs and jsdom lacks.
+    // They do not fail a test on their own, but each call is reported as an uncaught
+    // exception, which vitest counts as an error and therefore exits non-zero on.
+    setupFiles: ['tests/setup/jsdom-codemirror.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
