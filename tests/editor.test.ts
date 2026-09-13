@@ -179,10 +179,18 @@ describe('SpelEditor contextSchema', () => {
 
   it('can set contextSchema and editor still functions', () => {
     editor.contextSchema = {
-      variables: [{ name: 'test', type: 'String' }],
+      root: null,
+      variables: { test: { type: 'String' } },
+      beans: {},
+      types: {},
+      functions: {},
     };
     expect(editor.contextSchema).toEqual({
-      variables: [{ name: 'test', type: 'String' }],
+      root: null,
+      variables: { test: { type: 'String' } },
+      beans: {},
+      types: {},
+      functions: {},
     });
     // Editor should still work
     editor.setValue('#test');

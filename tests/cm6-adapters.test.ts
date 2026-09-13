@@ -7,8 +7,13 @@
 import { describe, it, expect } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { EditorState, type Extension } from '@codemirror/state';
-import { linter } from '@codemirror/lint';
+import { linter, type Diagnostic, type LintSource } from '@codemirror/lint';
 import { LanguageSupport, StringStream } from '@codemirror/language';
+import {
+  CompletionContext,
+  type CompletionResult,
+  type CompletionSource,
+} from '@codemirror/autocomplete';
 
 import { spelLanguage } from '../src/cm6/spel-language.js';
 import {
@@ -23,6 +28,32 @@ import { SpelExpressionParser, AstWalker, TokenKind } from '@agentix-e/spel-ts';
 import type { SpelNodeImpl } from '@agentix-e/spel-ts';
 
 import type { ContextSchema } from '@agentix-e/spel-ts';
+
+/**
+ * Run a completion source the way CodeMirror does.
+ *
+ * `CompletionContext` is a real instance because a hand-written object literal only
+ * approximates it, and the shape of that approximation is unchecked. The source is
+ * asserted to answer synchronously: `spelCompletion` must, and a test that awaited a
+ * promise would hide a source that did not.
+ */
+function completions(source: CompletionSource, doc: string, pos: number): CompletionResult {
+  const state = EditorState.create({ doc });
+  const result = source(new CompletionContext(state, pos, true));
+  if (!result || typeof (result as Promise<unknown>).then === 'function') {
+    throw new Error('spelCompletion must return a CompletionResult synchronously');
+  }
+  return result as CompletionResult;
+}
+
+/** Run a lint source the way CodeMirror does, asserting it answers synchronously. */
+function lint(source: LintSource, view: EditorView): readonly Diagnostic[] {
+  const result = source(view);
+  if (typeof (result as Promise<unknown>).then === 'function') {
+    throw new Error('spelLint must return diagnostics synchronously');
+  }
+  return result as readonly Diagnostic[];
+}
 
 function createView(doc: string, extensions: Extension[], container?: HTMLElement): EditorView {
   return new EditorView({
@@ -136,14 +167,7 @@ describe('Grammar token styles', () => {
 describe('Completion source', () => {
   it('returns completions at empty expression position', () => {
     const source = spelCompletion(() => null);
-    const state = EditorState.create({ doc: '' });
-    const ctx = {
-      state,
-      pos: 0,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '', 0);
     expect(result).not.toBeNull();
     if (result) {
       expect(result.options.length).toBeGreaterThan(0);
@@ -153,14 +177,7 @@ describe('Completion source', () => {
 
   it('returns completions at cursor position in expression', () => {
     const source = spelCompletion(() => null);
-    const state = EditorState.create({ doc: '1 + 2' });
-    const ctx = {
-      state,
-      pos: 4,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '1 + 2', 4);
     expect(result).not.toBeNull();
     if (result) {
       expect(result.options.length).toBeGreaterThan(0);
@@ -169,14 +186,7 @@ describe('Completion source', () => {
 
   it('uses matchBefore from position when context matches', () => {
     const source = spelCompletion(() => null);
-    const state = EditorState.create({ doc: 'null' });
-    const ctx = {
-      state,
-      pos: 4,
-      explicit: true,
-      matchBefore: (_re: RegExp) => ({ from: 0, text: 'null' }) as { from: number; text: string },
-    };
-    const result = source(ctx);
+    const result = completions(source, 'null', 4);
     expect(result).not.toBeNull();
     if (result) {
       // from should be 0 (from matchBefore), not 4 (position)
@@ -193,27 +203,13 @@ describe('Completion source', () => {
       functions: {},
     };
     const source = spelCompletion(() => schema);
-    const state = EditorState.create({ doc: '#' });
-    const ctx = {
-      state,
-      pos: 1,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '#', 1);
     expect(result).not.toBeNull();
   });
 
   it('returns keyword completions', () => {
     const source = spelCompletion(() => null);
-    const state = EditorState.create({ doc: '' });
-    const ctx = {
-      state,
-      pos: 0,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '', 0);
     expect(result).not.toBeNull();
     if (result) {
       const labels = result.options.map((o) => o.label);
@@ -233,7 +229,7 @@ describe('Lint source', () => {
     const div = document.createElement('div');
     const view = createView('1 + 2', [spelLanguage(), linter(spelLint(() => null))], div);
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(diags).toEqual([]);
     view.destroy();
   });
@@ -242,7 +238,7 @@ describe('Lint source', () => {
     const div = document.createElement('div');
     const view = createView('1 +', [spelLanguage(), linter(spelLint(() => null))], div);
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(diags.length).toBeGreaterThan(0);
     expect(diags[0]?.severity).toBeDefined();
     view.destroy();
@@ -252,7 +248,7 @@ describe('Lint source', () => {
     const div = document.createElement('div');
     const view = createView('', [spelLanguage(), linter(spelLint(() => null))], div);
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(diags).toEqual([]);
     view.destroy();
   });
@@ -261,7 +257,7 @@ describe('Lint source', () => {
     const div = document.createElement('div');
     const view = createView('   ', [spelLanguage(), linter(spelLint(() => null))], div);
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(diags).toEqual([]);
     view.destroy();
   });
@@ -274,7 +270,7 @@ describe('Lint source', () => {
       div,
     );
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     // May produce diagnostics
     expect(Array.isArray(diags)).toBe(true);
     view.destroy();
@@ -291,15 +287,13 @@ describe('Lint source', () => {
     const div = document.createElement('div');
     const view = createView('#missing', [spelLanguage(), linter(spelLint(() => schema))], div);
     const source = spelLint(() => schema);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(Array.isArray(diags)).toBe(true);
     view.destroy();
   });
 });
 
 describe('Hover tooltip', () => {
-  const parser = new SpelExpressionParser();
-
   it('spelHover() returns a valid extension', () => {
     const extension = spelHover();
     expect(extension).toBeDefined();
@@ -505,24 +499,17 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
       name: 'user',
       type: 'User',
       fields: { name: { type: 'string' } },
-      methods: { 'toString()': { type: 'string' } },
+      methods: { toString: { returnType: 'string' } },
     },
     variables: { user: { type: 'User' } },
     beans: { myBean: { type: 'MyBean' } },
-    types: { String: { type: 'class' } },
-    functions: { calc: { type: 'number' } },
+    types: { String: { className: 'java.lang.String' } },
+    functions: { calc: { returnType: 'number', params: [] } },
   };
 
   it('maps property kind via schema field completions', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: '' });
-    const ctx = {
-      state,
-      pos: 0,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '', 0);
     expect(result).not.toBeNull();
     if (result) {
       const propertyItem = result.options.find((o) => o.label === 'name');
@@ -533,17 +520,10 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
 
   it('maps method kind via schema method completions', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: '' });
-    const ctx = {
-      state,
-      pos: 0,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '', 0);
     expect(result).not.toBeNull();
     if (result) {
-      const methodItem = result.options.find((o) => o.label === 'toString()()');
+      const methodItem = result.options.find((o) => o.label === 'toString()');
       expect(methodItem).toBeDefined();
       expect(methodItem?.type).toBe('method');
     }
@@ -551,14 +531,7 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
 
   it('maps function kind via #function completions', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: '#' });
-    const ctx = {
-      state,
-      pos: 1,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '#', 1);
     expect(result).not.toBeNull();
     if (result) {
       const fnItem = result.options.find((o) => o.label === '#calc()');
@@ -569,14 +542,7 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
 
   it('maps type kind via T() completions', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: 'T(' });
-    const ctx = {
-      state,
-      pos: 2,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, 'T(', 2);
     expect(result).not.toBeNull();
     if (result) {
       const typeItem = result.options.find((o) => o.label === 'T(String)');
@@ -587,14 +553,7 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
 
   it('maps unknown/bean kind to default "text" type', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: '@' });
-    const ctx = {
-      state,
-      pos: 1,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '@', 1);
     expect(result).not.toBeNull();
     if (result) {
       const beanItem = result.options.find((o) => o.label === '@myBean');
@@ -606,14 +565,7 @@ describe('Completion source — branch coverage (mapKindToCM6Type)', () => {
 
   it('maps snippet kind to default "text" type', () => {
     const source = spelCompletion(() => richSchema);
-    const state = EditorState.create({ doc: '' });
-    const ctx = {
-      state,
-      pos: 0,
-      explicit: true,
-      matchBefore: (_re: RegExp) => null as { from: number; text: string } | null,
-    };
-    const result = source(ctx);
+    const result = completions(source, '', 0);
     expect(result).not.toBeNull();
     if (result) {
       const snippetItem = result.options.find((o) => o.label === '#this');
@@ -629,7 +581,7 @@ describe('Lint source — branch coverage (mapSeverity INFO)', () => {
     const div = document.createElement('div');
     const view = createView('true or true', [spelLanguage(), linter(spelLint(() => null))], div);
     const source = spelLint(() => null);
-    const diags = source(view);
+    const diags = lint(source, view);
     expect(diags.length).toBeGreaterThan(0);
     const infoDiag = diags.find((d) => d.severity === 'info');
     expect(infoDiag).toBeDefined();
@@ -668,45 +620,35 @@ describe('Grammar — branch coverage via direct token parser', () => {
 
   it('returns all tokens from "2 + 3" then hits end-of-stream path', () => {
     const parser = createTokenParser();
-    const stream = new StringStream('2 + 3');
+    const stream = new StringStream('2 + 3', 4, 2);
+    // The state is not optional: CodeMirror passes one per document, and the parser
+    // keeps its token cursor in it rather than in a closure shared by every document.
+    const state = parser.startState();
 
-    // First call should tokenize and return first token
-    const t0 = parser.token(stream);
+    const t0 = parser.token(stream, state);
     expect(t0).toBe('number');
     expect(stream.pos).toBeGreaterThan(0);
 
-    // Second call returns operator
-    const t1 = parser.token(stream);
+    const t1 = parser.token(stream, state);
     expect(t1).toBe('operator');
 
-    // Third call returns number
-    const t2 = parser.token(stream);
+    const t2 = parser.token(stream, state);
     expect(t2).toBe('number');
 
-    // Fourth call: no more tokens, hits skipToEnd path (lines 165-166)
-    const t3 = parser.token(stream);
+    // Past the last token: the remainder of the line is consumed and nothing is styled.
+    const t3 = parser.token(stream, state);
     expect(t3).toBeNull();
-    // stream should be at end
     expect(stream.pos).toBe(stream.string.length);
   });
 
-  it('hits skipToEnd path when tokenizer produces no displayable tokens', () => {
-    // Expression "T(String)" produces: IDENTIFIER, LPAREN, IDENTIFIER, RPAREN, EOF
-    // but stream.pos starts beyond them, simulating a gap causing while-loop skip
+  it('consumes the line when the cursor starts past every token', () => {
     const parser = createTokenParser();
-    const stream = new StringStream('T(String)');
-    stream.pos = stream.string.length; // Already at end, simulates CodeMirror eol check
+    const stream = new StringStream('T(String)', 4, 2);
+    const state = parser.startState();
+    // Simulate a scan resuming at the end of an already-parsed line.
+    stream.pos = stream.string.length;
 
-    // At end, CM calls eol() which is true, so this path may not be reached.
-    // But for coverage, we test that no tokens are returned when exhausted.
-    const t0 = parser.token(stream);
-    // Should reach the end-of-token logic
-    if (t0 !== null) {
-      // Tokens were returned, consume them
-      for (let i = 0; i < 10 && parser.token(stream) !== null; i++) {
-        // exhaust
-      }
-    }
+    expect(parser.token(stream, state)).toBeNull();
     expect(stream.pos).toBe(stream.string.length);
   });
 

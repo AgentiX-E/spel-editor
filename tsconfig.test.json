@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  // The Playwright browser test and `playwright.config.ts` stay outside this config:
+  // both read `process.env`, and `@types/node` is not a dependency of this package —
+  // it appears in the lockfile only as an optional peer. Adding it would desynchronise
+  // `pnpm-lock.yaml`, which CI installs with `--frozen-lockfile`, so the gap is
+  // recorded rather than papered over.
+  "exclude": ["node_modules", "dist", "tests/browser-integration.test.ts"]
+}

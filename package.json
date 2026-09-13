@@ -24,7 +24,7 @@
     "test:browser:ui": "playwright test --ui",
     "test:all": "pnpm test && pnpm test:browser",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'",
     "clean": "rm -rf dist",
@@ -41,6 +41,7 @@
     "@codemirror/lint": "^6.0.0",
     "@codemirror/state": "^6.0.0",
     "@codemirror/view": "^6.0.0",
+    "@lezer/highlight": "^1.2.3",
     "lit": "^3.0.0"
   },
   "peerDependencies": {

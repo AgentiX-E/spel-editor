@@ -1,19 +1,22 @@
 /**
  * SpEL grammar parser for CodeMirror 6 — StreamLanguage adapter.
  *
- * Uses @agentix-e/spel-ts Tokenizer for precise token-level parsing
- * mapped to CM6 StreamParser tokens. Provides accurate syntax highlighting
- * matching spel-ts v1.1.0 lexer behavior without a full Lezer grammar build step.
+ * Uses the @agentix-e/spel-ts Tokenizer for token-level parsing, mapped onto CM6
+ * StreamParser token names so highlighting cannot drift from the engine's lexer
+ * without a Lezer grammar build step.
  *
- * For incremental parsing and richer editor features, a full Lezer grammar
- * can be added later via @lezer/generator build pipeline.
+ * For incremental parsing and richer editor features, a full Lezer grammar can be
+ * added later via a @lezer/generator build pipeline.
  */
 import { type StringStream, StreamLanguage } from '@codemirror/language';
 import { Tokenizer as SpelTokenizer, TokenKind } from '@agentix-e/spel-ts';
 
 /**
- * Map spel-ts TokenKind to CM6 highlight style.
- * Exported for testing.
+ * Map a spel-ts TokenKind to a CM6 highlight style name.
+ *
+ * Each name is resolved to a tag by `@lezer/highlight`, so the value must be a tag
+ * name; a name that is not one loses its colour and makes CodeMirror warn. Exported
+ * for testing.
  */
 export function tokenKindToStyle(kind: TokenKind): string {
   switch (kind) {
@@ -39,7 +42,7 @@ export function tokenKindToStyle(kind: TokenKind): string {
       return 'string';
     // Variables
     case TokenKind.IDENTIFIER:
-      // Could be a variable reference if preceded by #, handled below
+      // A variable reference is decided by the preceding token, in `styleForToken`.
       return 'variableName';
     // Operators
     case TokenKind.PLUS:
@@ -93,94 +96,121 @@ export function tokenKindToStyle(kind: TokenKind): string {
     case TokenKind.TYPE_START:
       return 'typeName';
     default:
+      // EOF, and anything a future engine version adds: no style rather than a
+      // wrong one. A test pins every existing kind to a non-empty style.
       return '';
   }
 }
 
-/** Create a StreamLanguage-based SpEL language for CodeMirror 6 */
-export function createSpelStreamParser() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return StreamLanguage.define(createTokenParser() as any);
+/** A styled range, in offsets relative to the start of its line. */
+interface SpelSpan {
+  readonly from: number;
+  readonly to: number;
+  readonly style: string;
 }
 
 /**
- * Create the token parser spec for StreamLanguage.define.
- * Exported for testing — allows direct invocation of the token function.
+ * Per-document parser state.
+ *
+ * CodeMirror's `StreamParser` contract is that `token(stream, state)` depends only on
+ * its arguments and that `startState()` yields a fresh state per parse. Holding the
+ * token list in the closure instead made one cache serve every document that reused
+ * the language: two parses interleaved and each replaced the other's tokens, so an
+ * editor could paint itself with a different editor's tokens.
+ */
+interface SpelStreamState {
+  /** The line the cached spans were produced from. */
+  line: string | null;
+  /** Offsets within the current line, in order. */
+  spans: SpelSpan[];
+  /** Index of the next span to serve. */
+  index: number;
+}
+
+/** Create a StreamLanguage-based SpEL language for CodeMirror 6. */
+export function createSpelStreamParser() {
+  return StreamLanguage.define(createTokenParser());
+}
+
+/**
+ * Tokenize one line and describe its styled ranges.
+ *
+ * A line the engine cannot lex — an unterminated string literal, say — yields no
+ * spans and is shown unstyled rather than throwing. A stream parser cannot report a
+ * diagnostic, since it may only return a token name; the failure is surfaced by the
+ * lint source, which runs the same engine and reports the parse error as a
+ * diagnostic on the same text.
+ */
+function spansFor(line: string): SpelSpan[] {
+  let tokens: ReturnType<SpelTokenizer['tokenize']>;
+  try {
+    tokens = new SpelTokenizer(line).tokenize();
+  } catch {
+    return [];
+  }
+
+  const spans: SpelSpan[] = [];
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index]!;
+    if (token.kind === TokenKind.EOF) break;
+    const style = styleForToken(tokens, index);
+    if (style === '') continue;
+    spans.push({ from: token.startPos, to: token.endPos, style });
+  }
+  return spans;
+}
+
+/**
+ * The style for the token at `index`, which for an identifier depends on what
+ * precedes it: `#name` is a variable and `.name` is a property.
+ */
+function styleForToken(tokens: readonly { kind: TokenKind }[], index: number): string {
+  const token = tokens[index]!;
+  if (token.kind === TokenKind.IDENTIFIER) {
+    const previous = index > 0 ? tokens[index - 1] : undefined;
+    if (previous?.kind === TokenKind.HASH) return 'variableName';
+    if (previous?.kind === TokenKind.DOT || previous?.kind === TokenKind.SAFE_NAV) {
+      return 'propertyName';
+    }
+  }
+  return tokenKindToStyle(token.kind);
+}
+
+/**
+ * Create the token parser spec for `StreamLanguage.define`.
+ *
+ * Exported for testing, which invokes `token` directly with a hand-made state.
  */
 export function createTokenParser(): {
-  startState: () => null;
-  token: (stream: StringStream) => string | null;
+  startState: () => SpelStreamState;
+  token: (stream: StringStream, state: SpelStreamState) => string | null;
 } {
-  let _tokenizer: SpelTokenizer | null = null;
-  let _tokens: Array<{ from: number; to: number; style: string }> = [];
-  let _tokenIndex = 0;
+  const startState = (): SpelStreamState => ({ line: null, spans: [], index: 0 });
 
-  const startState = (): null => null;
+  const token = (stream: StringStream, state: SpelStreamState): string | null => {
+    // CodeMirror constructs a fresh StringStream per line with `pos` at 0, and a new
+    // state per parse. A different line, or a scan restarting from the line start,
+    // therefore means the cached spans no longer apply. `stream.start` cannot serve
+    // as an identity here: CodeMirror resets it to `stream.pos` before every call.
+    if (state.line !== stream.string || stream.pos === 0) {
+      state.line = stream.string;
+      state.spans = spansFor(stream.string);
+      state.index = 0;
+    }
 
-  const token = (stream: StringStream): string | null => {
-    // Tokenize entire input on first call
-    if (!_tokenizer || _tokenIndex === 0) {
-      _tokenizer = new SpelTokenizer(stream.string);
-      let rawTokens: ReturnType<SpelTokenizer['tokenize']>;
-      try {
-        rawTokens = _tokenizer.tokenize();
-      } catch {
-        // Tokenizer threw on invalid input (e.g. unterminated string) —
-        // treat entire content as unhighlighted plain text
-        _tokens = [];
-        _tokenIndex = 0;
-        stream.skipToEnd();
-        return null;
-      }
-      _tokens = [];
-      _tokenIndex = 0;
-
-      for (let i = 0; i < rawTokens.length - 1; i++) {
-        // Skip EOF
-        const tok = rawTokens[i]!;
-        const style = tokenKindToStyle(tok.kind);
-
-        // Handle special cases
-        if (tok.kind === TokenKind.IDENTIFIER) {
-          const prevTok = i > 0 ? rawTokens[i - 1] : null;
-          if (prevTok?.kind === TokenKind.HASH) {
-            // #variableName — highlight the variable name
-            _tokens.push({
-              from: tok.startPos,
-              to: tok.endPos,
-              style: 'variableName',
-            });
-            continue;
-          }
-          if (prevTok?.kind === TokenKind.DOT || prevTok?.kind === TokenKind.SAFE_NAV) {
-            // .property or ?.property
-            _tokens.push({
-              from: tok.startPos,
-              to: tok.endPos,
-              style: 'propertyName',
-            });
-            continue;
-          }
-        }
-
-        _tokens.push({ from: tok.startPos, to: tok.endPos, style });
+    while (state.index < state.spans.length) {
+      const span = state.spans[state.index]!;
+      state.index += 1;
+      if (span.to > stream.pos) {
+        stream.pos = span.to;
+        return span.style;
       }
     }
 
-    // Return tokens in order
-    while (_tokenIndex < _tokens.length) {
-      const t = _tokens[_tokenIndex]!;
-      if (t.from >= stream.pos) {
-        stream.pos = t.to;
-        _tokenIndex++;
-        return t.style || null;
-      }
-      _tokenIndex++;
-    }
-
-    // Skip to end
+    // Every span is behind the cursor: consume the remainder of the line, and return
+    // null for it. Advancing is mandatory — CodeMirror throws if a call to `token`
+    // leaves `stream.pos` where it found it.
     stream.skipToEnd();
-    _tokenIndex = 0; // Reset for next parse
     return null;
   };
 
