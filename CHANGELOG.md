@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-09-14
+
+### Fixed
+
+- **The completion range was found with a scan that was quadratic in the line length.** The adapter
+  asked CodeMirror for it with `matchBefore(/[\p{L}\p{N}_$#@.]*$/u)`, and a character class
+  quantified and anchored at the cursor is retried from every offset of a long run of name
+  characters whose end the anchor then rejects: measured at 662 ms for a 32 000-character line,
+  four times the work for twice the line. A document kept on one line reaches that, and the editor
+  is embedded in someone else's page, so the cost is theirs. The range is now walked back over the
+  run once, and it starts at the same offset — including the case with no name before the cursor,
+  where `matchBefore` answered null and the fallback supplied the cursor position.
+
+### Changed
+
+- `@agentix-e/spel-ts` moves to **2.0.2** in the lockfile. The declared range already allowed it.
+  This package uses spel-ts at runtime — the tokenizer and `TokenKind` for the grammar, the parser
+  behind lint and hover, and the completion, formatter and diagnostic engines — so the move is
+  verified by the suite rather than assumed, and the two behaviours 2.0.2 changes (`%c` in
+  `String.format`, and the engine's own prefix scan) are both outside what this package calls.
+
 ## [1.2.0] — 2026-09-13
 ### Added
 - `docs/integration.md` — embedding, theming, accessibility, and how to call a provider
