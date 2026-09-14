@@ -37,11 +37,11 @@ importers:
         version: 3.3.3
     devDependencies:
       '@agentix-e/nl2spel':
-        specifier: ^1.3.0
-        version: 1.3.0(@agentix-e/spel-ts@2.0.0)
+        specifier: ^1.4.0
+        version: 1.4.0(@agentix-e/spel-ts@2.0.0)
       '@agentix-e/nl2spel-openai':
         specifier: ^1.3.0
-        version: 1.3.0(@agentix-e/nl2spel@1.3.0(@agentix-e/spel-ts@2.0.0))
+        version: 1.3.0(@agentix-e/nl2spel@1.4.0(@agentix-e/spel-ts@2.0.0))
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.61.1
@@ -74,8 +74,8 @@ packages:
     peerDependencies:
       '@agentix-e/nl2spel': '>=1.1.0'
 
-  '@agentix-e/nl2spel@1.3.0':
-    resolution: {integrity: sha512-cNaDrM1OnaWrpzKvtndKdNQ2P9tlAmyVCNZY3hmhBPWrp4V8VGXGW8Mzx3LHTawEBPlNdQoZLyCK2L3tAXvTVQ==}
+  '@agentix-e/nl2spel@1.4.0':
+    resolution: {integrity: sha512-oGfarDkdUJLpEozbkKanN9J1SxDltfGxRYdlu4bN3W79PFMwvyYp62XiXmvvRLRck/SV1gUXzqxHqUgZL/2wwA==}
     peerDependencies:
       '@agentix-e/spel-ts': '>=1.1.0'
     peerDependenciesMeta:
@@ -1673,11 +1673,11 @@ packages:
 
 snapshots:
 
-  '@agentix-e/nl2spel-openai@1.3.0(@agentix-e/nl2spel@1.3.0(@agentix-e/spel-ts@2.0.0))':
+  '@agentix-e/nl2spel-openai@1.3.0(@agentix-e/nl2spel@1.4.0(@agentix-e/spel-ts@2.0.0))':
     dependencies:
-      '@agentix-e/nl2spel': 1.3.0(@agentix-e/spel-ts@2.0.0)
+      '@agentix-e/nl2spel': 1.4.0(@agentix-e/spel-ts@2.0.0)
 
-  '@agentix-e/nl2spel@1.3.0(@agentix-e/spel-ts@2.0.0)':
+  '@agentix-e/nl2spel@1.4.0(@agentix-e/spel-ts@2.0.0)':
     optionalDependencies:
       '@agentix-e/spel-ts': 2.0.0
 
