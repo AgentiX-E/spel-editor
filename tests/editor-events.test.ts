@@ -5,7 +5,14 @@
  * and error handling — all with real DOM and real EditorView instances.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SpelEditor } from '../src/spel-editor.js';
+// Importing this module is what registers the element: the `@customElement` decorator calls
+// `customElements.define` as a side effect. This file names `SpelEditor` only in type
+// positions, so the import is written as two statements — a bare one for the side effect and
+// an `import type` for the annotation. A combined value import that is never used as a value
+// is free to be elided by the transform, and then the module never runs and `createElement`
+// returns an element that was never upgraded.
+import '../src/spel-editor.js';
+import type { SpelEditor } from '../src/spel-editor.js';
 
 interface ChangeEventDetail {
   value: string;
