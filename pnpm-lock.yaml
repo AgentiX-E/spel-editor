@@ -1291,7 +1291,7 @@ snapshots:
 
   '@agentix-e/nl2spel@1.4.0(@agentix-e/spel-ts@2.0.2)':
     optionalDependencies:
-      '@agentix-e/spel-ts': 2.0.0
+      '@agentix-e/spel-ts': 2.0.2
 
   '@agentix-e/spel-ts@2.0.2': {}
 
