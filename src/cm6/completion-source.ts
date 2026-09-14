@@ -4,6 +4,7 @@ import {
   type CompletionSource,
   type CompletionContext,
 } from '@codemirror/autocomplete';
+import type { EditorState } from '@codemirror/state';
 import { SpelCompletionEngine, type CompletionItem, type ContextSchema } from '@agentix-e/spel-ts';
 
 import { toCm6Snippet } from './snippet.js';
@@ -19,8 +20,23 @@ import { toCm6Snippet } from './snippet.js';
  * `#order.amo` instead of the whole reference, and left `validFor` with no way to
  * notice that a space ends the token.
  */
-const NAME_PREFIX = /[\p{L}\p{N}_$#@.]*$/u;
+const NAME_CHARACTER = /[\p{L}\p{N}_$#@.]/u;
 const NAME_VALID_FOR = /^[\p{L}\p{N}_$#@.]*$/u;
+
+/**
+ * The start of the name the cursor sits in, which is the position a completion replaces from.
+ *
+ * Only the current line is read: a name cannot span a line break, which is also the scope
+ * CodeMirror's own `matchBefore` used.
+ */
+function nameStartAt(state: EditorState, position: number): number {
+  const line = state.doc.lineAt(position);
+  let start = position;
+  while (start > line.from && NAME_CHARACTER.test(state.sliceDoc(start - 1, start))) {
+    start--;
+  }
+  return start;
+}
 
 /**
  * Adapter: spel-ts CompletionEngine → CM6 CompletionSource.
@@ -38,11 +54,16 @@ export function spelCompletion(getContextSchema?: () => ContextSchema | null): C
     const items = SpelCompletionEngine.getCompletions(expression, position, schema);
 
     return {
-      // `matchBefore` answers null when the pattern does not match at the cursor, so the
-      // fallback stays even though NAME_PREFIX, which may match empty, always matches
-      // today. It guards CodeMirror's contract rather than a case this adapter can reach,
-      // and a future narrowing of the pattern would make it live.
-      from: context.matchBefore(NAME_PREFIX)?.from ?? position,
+      // Scanned in place rather than through `context.matchBefore(NAME_PREFIX)`. A pattern that
+      // ends in a quantified class anchored at the cursor retries that class from every offset of
+      // a long run of name characters whose end the anchor then rejects, which is quadratic: it
+      // measured 662 ms for a 32 000-character line, and a single-line document reaches that.
+      // Walking back over the run once gives the same range for a single pass.
+      //
+      // `matchBefore` could answer null when the pattern did not match at the cursor, and the
+      // fallback to `position` guarded that contract. The scan cannot fail — an empty run is a
+      // run — so the value is `position` in exactly the case the fallback covered.
+      from: nameStartAt(context.state, position),
       options: items.map((item) => mapToCM6Completion(item)),
       // Stated rather than omitted, so the list stays open only while the cursor is
       // still inside a name. `() => true` claimed every position continues a token,
